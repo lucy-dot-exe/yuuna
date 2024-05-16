@@ -1,6 +1,6 @@
 type RectangleRenderable<State> = {
-  id: string;
   type: "RECTANGLE";
+  id: string;
   position: { x: number; y: number };
   size: { width: number; height: number };
   color: string;
@@ -10,8 +10,8 @@ type RectangleRenderable<State> = {
 };
 
 type CircleRenderable<State> = {
-  id: string;
   type: "CIRCLE";
+  id: string;
   position: { x: number; y: number };
   radius: number;
   color: string;
@@ -21,25 +21,51 @@ type CircleRenderable<State> = {
 };
 
 type TextRenderable = {
-  id: string;
   type: "TEXT";
+  id: string;
   position: { x: number; y: number };
   align?: { x: "left" | "center" | "right"; y: "bottom" | "middle" | "top" };
   color: string;
   text: string;
 };
 
-type Renderable<State> =
+type SpriteRenderable<State, ResourceId> = {
+  type: "SPRITE";
+
+  id: string;
+  position: { x: number; y: number };
+  resourceId: ResourceId;
+  frame: number;
+  scale?: number;
+  opacity?: number;
+
+  onClick?: (state: State) => State;
+  onHoverIn?: (state: State) => State;
+  onHoverOut?: (state: State) => State;
+};
+
+type Renderable<State, ResourceId> =
   | RectangleRenderable<State>
   | CircleRenderable<State>
+  | SpriteRenderable<State, ResourceId>
   | TextRenderable;
 
-function runEngine<State>(props: {
+type Position = { x: number; y: number };
+
+async function runEngine<State, ResourceId extends string>(props: {
+  resources: Record<
+    ResourceId,
+    {
+      src: string;
+      size: { width: number; height: number };
+      slices: { vertical: number; horizontal: number };
+    }
+  >;
   initialState: State;
   nextFrame: (params: { state: State; delta: number }) => State;
   render: (state: State) => {
     cursor: "default" | "pointer";
-    renderables: Renderable<State>[];
+    renderables: Renderable<State, ResourceId>[];
   };
 }) {
   const canvas = window.document.getElementById("luna");
@@ -60,6 +86,93 @@ function runEngine<State>(props: {
 
   let state: State = props.initialState;
 
+  const resourceById = await iterateRecord(
+    props.resources,
+    async ({ value }) =>
+      new Promise<{
+        image: HTMLImageElement;
+        size: { width: number; height: number };
+        slices: { horizontal: number; vertical: number };
+      }>((resolve) => {
+        const image = new Image();
+
+        image.src = value.src;
+
+        image.onload = function () {
+          resolve({
+            image,
+            size: {
+              width: value.size.width / value.slices.horizontal,
+              height: value.size.height / value.slices.vertical,
+            },
+            slices: value.slices,
+          });
+        };
+      })
+  );
+
+  context.imageSmoothingEnabled = false;
+
+  function getIsHovered(
+    position: Position,
+    r: Renderable<State, ResourceId>
+  ): boolean {
+    const isNonHoverable =
+      r.type === "TEXT" ||
+      (r.onHoverIn === undefined &&
+        r.onHoverOut === undefined &&
+        r.onClick === undefined);
+
+    if (isNonHoverable) {
+      return false;
+    }
+
+    if (r.type === "CIRCLE") {
+      const delta = {
+        x: Math.abs(position.x - r.position.x),
+        y: Math.abs(position.y - r.position.y),
+      };
+
+      const distance = Math.sqrt(delta.x * delta.x + delta.y * delta.y);
+      const isHovered = distance < r.radius;
+      return isHovered;
+    }
+
+    if (r.type === "RECTANGLE") {
+      const topLeft = { x: r.position.x, y: r.position.y };
+      const bottomRight = {
+        x: r.position.x + r.size.width,
+        y: r.position.y + r.size.height,
+      };
+
+      const isInsideX = position.x > topLeft.x && position.x < bottomRight.x;
+      const isInsideY = position.y > topLeft.y && position.y < bottomRight.y;
+
+      const isHovered = isInsideX && isInsideY;
+      return isHovered;
+    }
+
+    if (r.type === "SPRITE") {
+      const topLeft = { x: r.position.x, y: r.position.y };
+      const resource = resourceById[r.resourceId];
+      const { scale = 1 } = r;
+
+      const bottomRight = {
+        x: r.position.x + resource.size.width * scale,
+        y: r.position.y + resource.size.height * scale,
+      };
+
+      const isInsideX = position.x > topLeft.x && position.x < bottomRight.x;
+      const isInsideY = position.y > topLeft.y && position.y < bottomRight.y;
+
+      const isHovered = isInsideX && isInsideY;
+
+      return isHovered;
+    }
+
+    exhaust(r);
+  }
+
   const updateState = (updateFn: (state: State) => State) => {
     state = updateFn(state);
   };
@@ -67,58 +180,20 @@ function runEngine<State>(props: {
   let lastFrame: number = Date.now();
   let hoveredId: string | null = null;
 
-  canvas.addEventListener("click", (ev) => {
-    const position = { x: ev.offsetX, y: ev.offsetY };
-
+  canvas.addEventListener("click", () => {
     const { renderables } = props.render(state);
 
-    state = renderables
-      .flatMap((r) => {
-        if (r.type === "CIRCLE") {
-          if (r.onClick === undefined) return [];
+    if (hoveredId !== null) {
+      const hovered = renderables.find(byId(hoveredId));
 
-          const delta = {
-            x: Math.abs(position.x - r.position.x),
-            y: Math.abs(position.y - r.position.y),
-          };
-
-          const distance = Math.sqrt(delta.x * delta.x + delta.y * delta.y);
-
-          if (distance > r.radius) {
-            return [];
-          }
-
-          return [{ onClick: r.onClick }];
-        }
-
-        if (r.type === "RECTANGLE") {
-          if (r.onClick === undefined) return [];
-
-          const topLeft = { x: r.position.x, y: r.position.y };
-          const bottomRight = {
-            x: r.position.x + r.size.width,
-            y: r.position.y + r.size.height,
-          };
-
-          const isInsideX =
-            position.x > topLeft.x && position.x < bottomRight.x;
-          const isInsideY =
-            position.y > topLeft.y && position.y < bottomRight.y;
-
-          const isInside = isInsideX && isInsideY;
-
-          if (!isInside) return [];
-
-          return [{ onClick: r.onClick }];
-        }
-
-        if (r.type === "TEXT") {
-          return [];
-        }
-
-        exhaust(r);
-      })
-      .reduce((acc, element) => element.onClick(acc), state);
+      if (
+        hovered !== undefined &&
+        "onClick" in hovered &&
+        hovered.onClick !== undefined
+      ) {
+        updateState(hovered.onClick);
+      }
+    }
   });
 
   canvas.addEventListener("mousemove", (ev) => {
@@ -126,44 +201,10 @@ function runEngine<State>(props: {
 
     const { renderables } = props.render(state);
 
-    function getIsHovered(r: Renderable<State>): boolean {
-      const isNonHoverable =
-        r.type === "TEXT" ||
-        (r.onHoverIn === undefined && r.onHoverOut === undefined);
-
-      if (isNonHoverable) {
-        return false;
-      }
-
-      if (r.type === "CIRCLE") {
-        const delta = {
-          x: Math.abs(position.x - r.position.x),
-          y: Math.abs(position.y - r.position.y),
-        };
-
-        const distance = Math.sqrt(delta.x * delta.x + delta.y * delta.y);
-        const isHovered = distance < r.radius;
-        return isHovered;
-      }
-
-      if (r.type === "RECTANGLE") {
-        const topLeft = { x: r.position.x, y: r.position.y };
-        const bottomRight = {
-          x: r.position.x + r.size.width,
-          y: r.position.y + r.size.height,
-        };
-
-        const isInsideX = position.x > topLeft.x && position.x < bottomRight.x;
-        const isInsideY = position.y > topLeft.y && position.y < bottomRight.y;
-
-        const isHovered = isInsideX && isInsideY;
-        return isHovered;
-      }
-
-      exhaust(r);
-    }
-
-    const hovered = renderables.find(getIsHovered);
+    const hovered = renderables
+      .map((s) => s)
+      .reverse()
+      .find((r) => getIsHovered(position, r));
 
     if (
       hovered !== undefined &&
@@ -189,6 +230,8 @@ function runEngine<State>(props: {
 
     hoveredId = hovered === undefined ? null : hovered.id;
   });
+
+  context.imageSmoothingEnabled = false;
 
   setInterval(() => {
     const now = Date.now();
@@ -249,6 +292,36 @@ function runEngine<State>(props: {
         continue;
       }
 
+      if (renderable.type === "SPRITE") {
+        const { scale = 1, opacity = 1 } = renderable;
+        const resource = resourceById[renderable.resourceId];
+
+        const frame = {
+          x: renderable.frame % resource.slices.horizontal,
+          y:
+            Math.floor(renderable.frame / resource.slices.vertical) %
+            resource.slices.vertical,
+        };
+
+        context.globalAlpha = opacity;
+
+        context.drawImage(
+          resource.image,
+          frame.x * resource.size.width,
+          frame.y * resource.size.height,
+          resource.size.width,
+          resource.size.height,
+          renderable.position.x,
+          renderable.position.y,
+          resource.size.width * scale,
+          resource.size.height * scale
+        );
+
+        context.globalAlpha = 1;
+
+        continue;
+      }
+
       exhaust(renderable);
     }
 
@@ -275,12 +348,46 @@ function byId<T extends { id: string }>(id: string): (value: T) => boolean {
   return (value) => value.id === id;
 }
 
+async function iterateRecord<Key extends string, T, Item>(
+  record: Record<Key, T>,
+  fn: (item: { key: Key; value: T }) => Item | Promise<Item>
+): Promise<Record<Key, Item>> {
+  const mapped: Record<Key, Item> = unsafe<{}, Record<Key, Item>>({});
+
+  const $mappings = getKeys(record).map(async (key) => {
+    mapped[key] = await fn({ key, value: record[key] });
+  });
+
+  await Promise.all($mappings);
+
+  return mapped;
+}
+
+function getKeys<Keys extends string>(object: Record<Keys, any>): Keys[] {
+  return unsafe<string[], Keys[]>(Object.keys(object));
+}
+
+function unsafe<Input, Output>(input: Input): Output {
+  //@ts-ignore
+  return input;
+}
+
 window.onload = () =>
-  runEngine<{
-    counter: number;
-    isHovering: boolean;
-  }>({
+  runEngine<
+    {
+      counter: number;
+      isHovering: boolean;
+    },
+    "food"
+  >({
     initialState: { counter: 0, isHovering: false },
+    resources: {
+      food: {
+        src: "resources/food.png",
+        size: { width: 128, height: 128 },
+        slices: { horizontal: 8, vertical: 8 },
+      },
+    },
 
     nextFrame: ({ state }) => state,
 
@@ -304,14 +411,16 @@ window.onload = () =>
         },
 
         {
-          id: "cookie",
-          type: "CIRCLE",
-          color: state.isHovering ? "#5f2b19" : "#873e23",
+          id: "food-sprite",
+          type: "SPRITE",
           position: {
-            x: 50,
-            y: 50,
+            x: 50 - 8 * 4,
+            y: 50 - 8 * 4,
           },
-          radius: 25,
+          resourceId: "food",
+          frame: state.counter % (8 * 8),
+          scale: 4,
+          opacity: state.isHovering ? 1 : 0.5,
           onClick: (state) => ({ ...state, counter: state.counter + 1 }),
           onHoverIn: (state) => ({ ...state, isHovering: true }),
           onHoverOut: (state) => ({ ...state, isHovering: false }),
