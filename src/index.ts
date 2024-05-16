@@ -27,7 +27,13 @@ window.onload = () =>
       },
     },
 
-    nextFrame: ({ state }) => state,
+    nextFrame: ({ state, keyboard }) => {
+      if (keyboard.KeyQ.isJustPressed) {
+        return { ...state, counter: state.counter + 1 };
+      }
+
+      return state;
+    },
 
     render: (state) => ({
       cursor: state.isHovering ? "pointer" : "default",

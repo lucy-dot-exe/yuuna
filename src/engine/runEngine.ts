@@ -3,7 +3,11 @@ import { Renderable } from "./renderable";
 import { Position } from "../utils/Position";
 import { CONSTANTS } from "../utils/constants";
 import { byId } from "../utils/byId";
-import { iterateRecord } from "../utils/iterateRecord";
+import { iterateRecord, iterateRecordAsync } from "../utils/iterateRecord";
+import { createRecord } from "../utils/createRecord";
+import { KeyboardKeys, keyboardKeys } from "./keyboardKeys";
+
+type KeyboardState = Record<KeyboardKeys, boolean>;
 
 export async function runEngine<State, ResourceId extends string>(props: {
   resources: Record<
@@ -15,7 +19,14 @@ export async function runEngine<State, ResourceId extends string>(props: {
     }
   >;
   initialState: State;
-  nextFrame: (params: { state: State; delta: number }) => State;
+  nextFrame: (params: {
+    state: State;
+    delta: number;
+    keyboard: Record<
+      KeyboardKeys,
+      { isPressed: boolean; isJustPressed: boolean; isJustReleased: boolean }
+    >;
+  }) => State;
   render: (state: State) => {
     cursor: "default" | "pointer";
     renderables: Renderable<State, ResourceId>[];
@@ -39,7 +50,7 @@ export async function runEngine<State, ResourceId extends string>(props: {
 
   let state: State = props.initialState;
 
-  const resourceById = await iterateRecord(
+  const resourceById = await iterateRecordAsync(
     props.resources,
     async ({ value }) =>
       new Promise<{
@@ -152,6 +163,34 @@ export async function runEngine<State, ResourceId extends string>(props: {
     }
   });
 
+  const initialState: { keyboardState: KeyboardState } = {
+    keyboardState: createRecord(keyboardKeys, () => false),
+  };
+
+  let previousState: { keyboardState: KeyboardState } = {
+    keyboardState: { ...initialState.keyboardState },
+  };
+
+  const currentState: { keyboardState: KeyboardState } = {
+    keyboardState: { ...initialState.keyboardState },
+  };
+
+  document.addEventListener("keydown", (event) => {
+    const pressedKey = keyboardKeys.find((key) => key === event.code);
+
+    if (pressedKey !== undefined) {
+      currentState.keyboardState[pressedKey] = true;
+    }
+  });
+
+  document.addEventListener("keyup", (event) => {
+    const releasedKey = keyboardKeys.find((key) => key === event.code);
+
+    if (releasedKey !== undefined) {
+      currentState.keyboardState[releasedKey] = false;
+    }
+  });
+
   canvas.addEventListener("mousemove", (ev) => {
     const position = { x: ev.offsetX, y: ev.offsetY };
 
@@ -212,7 +251,24 @@ export async function runEngine<State, ResourceId extends string>(props: {
     const now = Date.now();
     const delta = now - lastFrame;
 
-    updateState((state) => props.nextFrame({ state, delta }));
+    updateState((state) =>
+      props.nextFrame({
+        state,
+        delta,
+        keyboard: iterateRecord(
+          previousState.keyboardState,
+          ({ key, value: previouslyPressed }) => {
+            const isPressed = currentState.keyboardState[key];
+
+            return {
+              isPressed,
+              isJustPressed: isPressed && !previouslyPressed,
+              isJustReleased: !isPressed && previouslyPressed,
+            };
+          }
+        ),
+      })
+    );
 
     context.clearRect(0, 0, CONSTANTS.WINDOW.WIDTH, CONSTANTS.WINDOW.HEIGHT);
 
@@ -301,5 +357,6 @@ export async function runEngine<State, ResourceId extends string>(props: {
     }
 
     lastFrame = now;
+    previousState.keyboardState = { ...currentState.keyboardState };
   }, 0);
 }
