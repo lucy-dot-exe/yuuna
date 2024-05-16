@@ -3,21 +3,26 @@ import { Position } from "./utils/Position";
 import { SpriteRenderable } from "./engine/renderable";
 import { runEngine } from "./engine/runEngine";
 
+type GameState = {
+  counter: number;
+  isHovering: boolean;
+  objects: { position: Position }[];
+  mouse: Position | null;
+  elapsedTime: number;
+  deltaFrames: number[];
+  isMousePressed: boolean;
+};
+
 window.onload = () =>
-  runEngine<
-    {
-      counter: number;
-      isHovering: boolean;
-      objects: { position: Position }[];
-      mouse: Position | null;
-    },
-    "food"
-  >({
+  runEngine<GameState, "food">({
     initialState: {
       counter: 0,
       isHovering: false,
       objects: [],
       mouse: null,
+      deltaFrames: [],
+      elapsedTime: 0,
+      isMousePressed: false,
     },
     resources: {
       food: {
@@ -27,12 +32,27 @@ window.onload = () =>
       },
     },
 
-    nextFrame: ({ state, keyboard }) => {
-      if (keyboard.KeyQ.isJustPressed) {
-        return { ...state, counter: state.counter + 1 };
-      }
+    nextFrame: ({ state, keyboard, delta }) => {
+      const fns: ((state: GameState) => GameState)[] = [
+        (state) => {
+          if (keyboard.KeyQ.isJustPressed) {
+            return { ...state, counter: state.counter + 1 };
+          }
 
-      return state;
+          return state;
+        },
+
+        (state) => ({ ...state, isMousePressed: keyboard.KeyA.isPressed }),
+        (state) => ({ ...state, elapsedTime: state.elapsedTime + delta }),
+        (state) => ({
+          ...state,
+          deltaFrames: [...state.deltaFrames, state.elapsedTime].filter(
+            (time) => state.elapsedTime - time <= 1_000
+          ),
+        }),
+      ];
+
+      return fns.reduce((acc, apply) => apply(acc), state);
     },
 
     render: (state) => ({
@@ -59,7 +79,13 @@ window.onload = () =>
             objects: [...state.objects, { position: mouse }],
           }),
 
-          onMove: (state, { mouse }) => ({ ...state, mouse }),
+          onMove: (state, { mouse }) => ({
+            ...state,
+            mouse,
+            objects: state.isMousePressed
+              ? [...state.objects, { position: mouse }]
+              : state.objects,
+          }),
           onHoverOut: (state) => ({ ...state, mouse: null }),
         },
 
@@ -105,6 +131,22 @@ window.onload = () =>
           align: {
             x: "left",
             y: "middle",
+          },
+        },
+
+        {
+          id: "debug",
+          type: "TEXT",
+          color: "white",
+          position: {
+            x: CONSTANTS.WINDOW.WIDTH - 10,
+            y: 0 + 10,
+          },
+          text: `${state.deltaFrames.length} FPS
+          ${state.objects.length} elements`,
+          align: {
+            x: "right",
+            y: "top",
           },
         },
 
