@@ -1,27 +1,36 @@
-type RectangleRenderable = {
+type RectangleRenderable<State> = {
   type: "RECTANGLE";
   position: { x: number; y: number };
   size: { width: number; height: number };
   color: string;
+  onClick?: (state: State) => State;
 };
-type CircleRenderable = {
+
+type CircleRenderable<State> = {
   type: "CIRCLE";
   position: { x: number; y: number };
   radius: number;
   color: string;
+  onClick?: (state: State) => State;
 };
+
 type TextRenderable = {
   type: "TEXT";
   position: { x: number; y: number };
+  align?: { x: "left" | "center" | "right"; y: "bottom" | "middle" | "top" };
   color: string;
   text: string;
 };
-type Renderable = RectangleRenderable | CircleRenderable | TextRenderable;
+
+type Renderable<State> =
+  | RectangleRenderable<State>
+  | CircleRenderable<State>
+  | TextRenderable;
 
 function runEngine<State>(props: {
   initialState: State;
   nextFrame: (params: { state: State; delta: number }) => State;
-  render: (state: State) => Renderable[];
+  render: (state: State) => Renderable<State>[];
 }) {
   const canvas = window.document.getElementById("luna");
 
@@ -41,6 +50,60 @@ function runEngine<State>(props: {
 
   let state: State = props.initialState;
   let lastFrame: number = Date.now();
+
+  canvas.addEventListener("click", (ev) => {
+    const position = { x: ev.offsetX, y: ev.offsetY };
+
+    const renderables = props.render(state);
+
+    state = renderables
+      .flatMap((r) => {
+        if (r.type === "CIRCLE") {
+          if (r.onClick === undefined) return [];
+
+          const delta = {
+            x: Math.abs(position.x - r.position.x),
+            y: Math.abs(position.y - r.position.y),
+          };
+
+          const distance = Math.sqrt(delta.x * delta.x + delta.y * delta.y);
+
+          if (distance > r.radius) {
+            return [];
+          }
+
+          return [{ onClick: r.onClick }];
+        }
+
+        if (r.type === "RECTANGLE") {
+          if (r.onClick === undefined) return [];
+
+          const topLeft = { x: r.position.x, y: r.position.y };
+          const bottomRight = {
+            x: r.position.x + r.size.width,
+            y: r.position.y + r.size.height,
+          };
+
+          const isInsideX =
+            position.x > topLeft.x && position.x < bottomRight.x;
+          const isInsideY =
+            position.y > topLeft.y && position.y < bottomRight.y;
+
+          const isInside = isInsideX && isInsideY;
+
+          if (!isInside) return [];
+
+          return [{ onClick: r.onClick }];
+        }
+
+        if (r.type === "TEXT") {
+          return [];
+        }
+
+        exhaust(r);
+      })
+      .reduce((acc, element) => element.onClick(acc), state);
+  });
 
   setInterval(() => {
     const now = Date.now();
@@ -86,12 +149,13 @@ function runEngine<State>(props: {
           color,
           position: { x, y },
           text,
+          align,
         } = renderable;
         context.fillStyle = color;
 
         context.font = "30px Arial";
-        context.textAlign = "center";
-        context.textBaseline = "middle";
+        context.textAlign = align?.x ?? "left";
+        context.textBaseline = align?.y ?? "top";
         context.fillText(text, x, y);
 
         continue;
@@ -121,39 +185,34 @@ window.onload = () =>
   }>({
     initialState: { counter: 0 },
 
-    nextFrame: ({ state, delta }) => ({
-      counter: state.counter + delta,
+    nextFrame: ({ state }) => ({
+      counter: state.counter,
     }),
 
     render: (state) => [
       {
-        type: "RECTANGLE",
-        color: "red",
-        position: { x: state.counter % CONSTANTS.WINDOW.WIDTH, y: 20 },
-        size: { height: 50, width: 50 },
-      },
-
-      {
         type: "TEXT",
         color: "white",
         position: {
-          x: 50,
-          y:
-            ((state.counter * 0.01) % CONSTANTS.WINDOW.WIDTH) %
-            CONSTANTS.WINDOW.HEIGHT,
+          x: 100,
+          y: 50,
         },
-        text: "Luna",
+        text: `${state.counter} cookies`,
+        align: {
+          x: "left",
+          y: "middle",
+        },
       },
 
       {
         type: "CIRCLE",
-        color: "white",
+        color: "brown",
         position: {
-          x: CONSTANTS.WINDOW.WIDTH * 0.5 + Math.cos(state.counter * 0.01) * 50,
-          y:
-            CONSTANTS.WINDOW.HEIGHT * 0.5 + Math.sin(state.counter * 0.01) * 50,
+          x: 50,
+          y: 50,
         },
         radius: 25,
+        onClick: ({ counter }) => ({ counter: counter + 1 }),
       },
     ],
   });
