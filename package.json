@@ -2,16 +2,18 @@
   "name": "luna",
   "version": "1.0.0",
   "main": "index.js",
-  "author": "GuiOliveira98 <lucinadotexe@gmail.com>",
+  "author": "luci-dot-exe<lucinadotexe@gmail.com>",
   "license": "MIT",
+  "type": "module",
   "scripts": {
-    "go": "nodemon"
-  },
-  "dependencies": {
-    "typescript": "^5.4.5"
+    "build": "rollup -c",
+    "watch": "rollup -c -w"
   },
   "devDependencies": {
     "nodemon": "^3.1.0",
-    "ts-node": "^10.9.2"
+    "rollup": "^4.17.2",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
   }
 }
