@@ -5,6 +5,7 @@ type RectangleRenderable<State> = {
   size: { width: number; height: number };
   color: string;
   onClick?: (state: State, event: { mouse: Position }) => State;
+  onMove?: (state: State, event: { mouse: Position }) => State;
   onHoverIn?: (state: State) => State;
   onHoverOut?: (state: State) => State;
 };
@@ -16,6 +17,7 @@ type CircleRenderable<State> = {
   radius: number;
   color: string;
   onClick?: (state: State, event: { mouse: Position }) => State;
+  onMove?: (state: State, event: { mouse: Position }) => State;
   onHoverIn?: (state: State) => State;
   onHoverOut?: (state: State) => State;
 };
@@ -40,6 +42,7 @@ type SpriteRenderable<State, ResourceId> = {
   opacity?: number;
 
   onClick?: (state: State, event: { mouse: Position }) => State;
+  onMove?: (state: State, event: { mouse: Position }) => State;
   onHoverIn?: (state: State) => State;
   onHoverOut?: (state: State) => State;
 };
@@ -234,6 +237,25 @@ async function runEngine<State, ResourceId extends string>(props: {
     hoveredId = hovered === undefined ? null : hovered.id;
   });
 
+  canvas.addEventListener("mousemove", (ev) => {
+    const mouse = { x: ev.offsetX, y: ev.offsetY };
+
+    const { renderables } = props.render(state);
+
+    if (hoveredId !== null) {
+      const hovered = renderables.find(byId(hoveredId));
+
+      if (
+        hovered !== undefined &&
+        "onMove" in hovered &&
+        hovered.onMove !== undefined
+      ) {
+        const onMove = hovered.onMove;
+        updateState((state) => onMove(state, { mouse }));
+      }
+    }
+  });
+
   context.imageSmoothingEnabled = false;
 
   setInterval(() => {
@@ -381,10 +403,16 @@ window.onload = () =>
       counter: number;
       isHovering: boolean;
       objects: { position: Position }[];
+      mouse: Position | null;
     },
     "food"
   >({
-    initialState: { counter: 0, isHovering: false, objects: [] },
+    initialState: {
+      counter: 0,
+      isHovering: false,
+      objects: [],
+      mouse: null,
+    },
     resources: {
       food: {
         src: "resources/food.png",
@@ -418,6 +446,39 @@ window.onload = () =>
             ...state,
             objects: [...state.objects, { position: mouse }],
           }),
+
+          onMove: (state, { mouse }) => ({ ...state, mouse }),
+          onHoverOut: (state) => ({ ...state, mouse: null }),
+        },
+
+        ...state.objects.map(
+          (obj, index): SpriteRenderable<any, any> => ({
+            id: `food-${index}`,
+            type: "SPRITE",
+            position: {
+              x: obj.position.x - 8 * 4,
+              y: obj.position.y - 8 * 4,
+            },
+            resourceId: "food",
+            frame: index % (8 * 8),
+            scale: 4,
+          })
+        ),
+
+        {
+          id: "preview",
+          type: "SPRITE",
+          position:
+            state.mouse !== null
+              ? { x: state.mouse.x - 8 * 4, y: state.mouse.y - 8 * 4 }
+              : {
+                  x: 0,
+                  y: 0,
+                },
+          resourceId: "food",
+          scale: 4,
+          frame: state.objects.length,
+          opacity: state.mouse !== null ? 1 : 0,
         },
 
         {
@@ -450,20 +511,6 @@ window.onload = () =>
           onHoverIn: (state) => ({ ...state, isHovering: true }),
           onHoverOut: (state) => ({ ...state, isHovering: false }),
         },
-
-        ...state.objects.map(
-          (obj, index): SpriteRenderable<any, any> => ({
-            id: `food-${index}`,
-            type: "SPRITE",
-            position: {
-              x: obj.position.x - 8 * 4,
-              y: obj.position.y - 8 * 4,
-            },
-            resourceId: "food",
-            frame: index % (8 * 8),
-            scale: 4,
-          })
-        ),
       ],
     }),
   });
