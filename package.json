@@ -1,0 +1,17 @@
+{
+  "name": "luna",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "GuiOliveira98 <lucinadotexe@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "go": "nodemon"
+  },
+  "dependencies": {
+    "typescript": "^5.4.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0",
+    "ts-node": "^10.9.2"
+  }
+}
