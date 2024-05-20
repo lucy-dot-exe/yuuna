@@ -1,63 +1,22 @@
 import { exhaust } from "../utils/exhaust";
-import { Renderable } from "./renderable";
 import { Position } from "../utils/Position";
 import { CONSTANTS } from "../utils/constants";
-import { byId } from "../utils/byId";
 import { iterateRecord, iterateRecordAsync } from "../utils/iterateRecord";
 import { createRecord } from "../utils/createRecord";
-import { KeyboardKeys, keyboardKeys } from "./keyboardKeys";
-
-type KeyboardState = Record<KeyboardKeys, boolean>;
+import {
+  GameEvent,
+  KeyboardState,
+  Renderable,
+  RunEngineFunction,
+  RunEngineProps,
+  keyboardKeys,
+} from "./types";
 
 let resetCanvas: (() => void) | null = null;
 
-export async function runEngine<State, ResourceId extends string>(props: {
-  resources: Record<
-    ResourceId,
-    {
-      src: string;
-      size: { width: number; height: number };
-      slices: { vertical: number; horizontal: number };
-    }
-  >;
-  initialState: State;
-  nextFrame: (params: {
-    state: State;
-    delta: number;
-    keyboard: Record<
-      KeyboardKeys,
-      { isPressed: boolean; isJustPressed: boolean; isJustReleased: boolean }
-    >;
-  }) => State;
-  render: (state: State) => {
-    cursor: "default" | "pointer";
-    renderables: Renderable<State, ResourceId>[];
-  };
-}): Promise<void>;
-
-export async function runEngine<State, ResourceId extends string>(props: {
-  resources: Record<
-    ResourceId,
-    {
-      src: string;
-      size: { width: number; height: number };
-      slices: { vertical: number; horizontal: number };
-    }
-  >;
-  initialState: State;
-  nextFrame: (params: {
-    state: State;
-    delta: number;
-    keyboard: Record<
-      KeyboardKeys,
-      { isPressed: boolean; isJustPressed: boolean; isJustReleased: boolean }
-    >;
-  }) => State;
-  render: (state: State) => {
-    cursor: "default" | "pointer";
-    renderables: Renderable<State, ResourceId>[];
-  };
-}): Promise<void> {
+export const runEngine: RunEngineFunction = async <State>(
+  props: RunEngineProps<State>
+) => {
   resetCanvas?.();
 
   const canvas = window.document.getElementById("luna");
@@ -78,8 +37,9 @@ export async function runEngine<State, ResourceId extends string>(props: {
 
   let state: State = props.initialState;
 
+  const resources = props.resources ?? {};
   const resourceById = await iterateRecordAsync(
-    props.resources,
+    resources,
     async ({ value }) =>
       new Promise<{
         image: HTMLImageElement;
@@ -105,17 +65,13 @@ export async function runEngine<State, ResourceId extends string>(props: {
 
   context.imageSmoothingEnabled = false;
 
-  function getIsHovered(
-    position: Position,
-    r: Renderable<State, ResourceId>
-  ): boolean {
-    const isNonHoverable =
+  function getFocusedElement(position: Position, r: Renderable): boolean {
+    const isNonInteractable =
       r.type === "TEXT" ||
-      (r.onHoverIn === undefined &&
-        r.onHoverOut === undefined &&
-        r.onClick === undefined);
+      ((r.isHoverable === undefined || !r.isHoverable) &&
+        (r.isClickable === undefined || !r.isClickable));
 
-    if (isNonHoverable) {
+    if (isNonInteractable) {
       return false;
     }
 
@@ -172,22 +128,19 @@ export async function runEngine<State, ResourceId extends string>(props: {
   let lastFrame: number = Date.now();
   let hoveredId: string | null = null;
 
+  const events: GameEvent[] = [];
+
   canvas.addEventListener("click", (ev) => {
     const mouse: Position = { x: ev.offsetX, y: ev.offsetY };
 
+    if (hoveredId === null) return;
+
     const { renderables } = props.render(state);
 
-    if (hoveredId !== null) {
-      const hovered = renderables.find(byId(hoveredId));
+    const hovered = renderables.find((e) => e.id === hoveredId);
 
-      if (
-        hovered !== undefined &&
-        "onClick" in hovered &&
-        hovered.onClick !== undefined
-      ) {
-        const onClick = hovered.onClick;
-        updateState((state: State) => onClick(state, { mouse }));
-      }
+    if (hovered !== undefined && hovered.isClickable) {
+      events.push({ tag: "CLICK", id: hovered.id, mouse });
     }
   });
 
@@ -220,56 +173,42 @@ export async function runEngine<State, ResourceId extends string>(props: {
   });
 
   canvas.addEventListener("mousemove", (ev) => {
-    const position = { x: ev.offsetX, y: ev.offsetY };
+    const mouse = { x: ev.offsetX, y: ev.offsetY };
 
     const { renderables } = props.render(state);
 
-    const hovered = renderables
-      .map((s) => s)
+    const hovered = [...renderables]
       .reverse()
-      .find((r) => getIsHovered(position, r));
+      .find((r) => getFocusedElement(mouse, r));
 
-    if (
-      hovered !== undefined &&
-      "onHoverIn" in hovered &&
-      hovered.id !== hoveredId &&
-      hovered.onHoverIn !== undefined
-    ) {
-      updateState(hovered.onHoverIn);
+    if (hovered !== undefined && hovered.isHoverable) {
+      events.push({ tag: "HOVER_IN", id: hovered.id, mouse });
     }
 
     if (hoveredId !== null) {
-      const lastHovered = renderables.find(byId(hoveredId));
+      const lastHovered = renderables.find((r) => r.id === hoveredId);
 
-      if (
-        lastHovered !== undefined &&
-        lastHovered.id !== hovered?.id &&
-        "onHoverOut" in lastHovered &&
-        lastHovered.onHoverOut !== undefined
-      ) {
-        updateState(lastHovered.onHoverOut);
+      if (lastHovered !== undefined && lastHovered.id !== hovered?.id) {
+        events.push({ tag: "HOVER_OUT", id: lastHovered.id, mouse });
       }
     }
 
-    hoveredId = hovered === undefined ? null : hovered.id;
+    hoveredId = hovered === undefined ? null : hovered.id ?? null;
   });
 
   canvas.addEventListener("mousemove", (ev) => {
     const mouse = { x: ev.offsetX, y: ev.offsetY };
 
+    if (hoveredId === null) {
+      return;
+    }
+
     const { renderables } = props.render(state);
 
-    if (hoveredId !== null) {
-      const hovered = renderables.find(byId(hoveredId));
+    const hovered = renderables.find((r) => r.id === hoveredId);
 
-      if (
-        hovered !== undefined &&
-        "onMove" in hovered &&
-        hovered.onMove !== undefined
-      ) {
-        const onMove = hovered.onMove;
-        updateState((state) => onMove(state, { mouse }));
-      }
+    if (hovered !== undefined && hovered.trackMouseMovement) {
+      events.push({ tag: "MOUSE_MOVE", mouse, id: hovered.id });
     }
   });
 
@@ -279,30 +218,36 @@ export async function runEngine<State, ResourceId extends string>(props: {
     const now = Date.now();
     const delta = now - lastFrame;
 
-    updateState((state) =>
-      props.nextFrame({
-        state,
-        delta,
-        keyboard: iterateRecord(
-          previousState.keyboardState,
-          ({ key, value: previouslyPressed }) => {
-            const isPressed = currentState.keyboardState[key];
+    events.push({ tag: "TIME", delta: delta });
 
-            return {
-              isPressed,
-              isJustPressed: isPressed && !previouslyPressed,
-              isJustReleased: !isPressed && previouslyPressed,
-            };
-          }
-        ),
-      })
-    );
+    for (const event of events) {
+      updateState((state) =>
+        props.nextState({
+          state,
+          event,
+          keyboard: iterateRecord(
+            previousState.keyboardState,
+            ({ key, value: previouslyPressed }) => {
+              const isPressed = currentState.keyboardState[key];
+
+              return {
+                isPressed,
+                isJustPressed: isPressed && !previouslyPressed,
+                isJustReleased: !isPressed && previouslyPressed,
+              };
+            }
+          ),
+        })
+      );
+    }
+
+    events.splice(0, events.length);
 
     context.clearRect(0, 0, CONSTANTS.WINDOW.WIDTH, CONSTANTS.WINDOW.HEIGHT);
 
     const { cursor, renderables } = props.render(state);
 
-    canvas.style.cursor = cursor;
+    canvas.style.cursor = cursor ?? "default";
 
     for (const renderable of renderables) {
       if (renderable.type === "RECTANGLE") {
@@ -391,4 +336,4 @@ export async function runEngine<State, ResourceId extends string>(props: {
   resetCanvas = () => {
     clearInterval(intervalId);
   };
-}
+};

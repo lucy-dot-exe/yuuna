@@ -212,30 +212,212 @@
 
       require(["vs/editor/editor.main"], function () {
         const lunasContext = `
-        declare var Luna: { runEngine: <State, ResourceId extends string>(props: {
-        resources: Record<
-            ResourceId,
-            {
-            src: string;
-            size: { width: number; height: number };
-            slices: { vertical: number; horizontal: number };
-            }
-        >;
-        initialState: State;
-        nextFrame: (params: {
-            state: State;
-            delta: number;
-            keyboard: Record<
-            string,
-            { isPressed: boolean; isJustPressed: boolean; isJustReleased: boolean }
-            >;
-        }) => State;
-        render: (state: State) => {
-            cursor: "default" | "pointer";
-            renderables: [];
+        declare type RectangleRenderable = {
+          type: "RECTANGLE";
+
+          position: { x: number; y: number };
+          size: { width: number; height: number };
+          color: string;
+
+          id?: string;
+          isClickable?: boolean;
+          isHoverable?: boolean;
+          trackMouseMovement?: boolean;
         };
-        }) => Promise<void>
-        }
+
+        
+        declare type CircleRenderable = {
+          type: "CIRCLE";
+
+          position: { x: number; y: number };
+          radius: number;
+          color: string;
+
+          id?: string;
+          isClickable?: boolean;
+          isHoverable?: boolean;
+          trackMouseMovement?: boolean;
+        };
+
+        declare type TextRenderable = {
+          type: "TEXT";
+
+          text: string;
+          color: string;
+          position: { x: number; y: number };
+          align?: { x: "left" | "center" | "right"; y: "bottom" | "middle" | "top" };
+
+          id?: string;
+          isClickable?: boolean;
+          isHoverable?: boolean;
+          trackMouseMovement?: boolean;
+        };
+
+        declare type SpriteRenderable = {
+          type: "SPRITE";
+
+          position: { x: number; y: number };
+          resourceId: string;
+          frame: number;
+          scale?: number;
+          opacity?: number;
+
+          id?: string;
+          isClickable?: boolean;
+          isHoverable?: boolean;
+          trackMouseMovement?: boolean;
+        };
+
+        declare type Renderable =
+          | RectangleRenderable
+          | CircleRenderable
+          | SpriteRenderable
+          | TextRenderable;
+
+       
+        declare type TimeEvent = { tag: "TIME"; delta: number };
+
+        declare type ClickEvent = {
+          tag: "CLICK";
+          id?: string;
+          mouse: { x: number; y: number };
+        };
+
+        declare type HoverInEvent = {
+          tag: "HOVER_IN";
+          id?: string;
+          mouse: { x: number; y: number };
+        };
+
+        declare type HoverOutEvent = {
+          tag: "HOVER_OUT";
+          id?: string;
+          mouse: { x: number; y: number };
+        };
+
+        declare type MouseMoveEvent = {
+          tag: "MOUSE_MOVE";
+          id?: string;
+          mouse: { x: number; y: number };
+        };
+
+        declare type GameEvent =
+          | TimeEvent
+          | ClickEvent
+          | HoverInEvent
+          | HoverOutEvent
+          | MouseMoveEvent;
+
+          
+        declare type NextStateProps<State> = {
+          state: State;
+          event: GameEvent;
+          keyboard: Record<
+            KeyboardKeys,
+            {
+              isPressed: boolean;
+              isJustPressed: boolean;
+              isJustReleased: boolean;
+            }
+          >;
+        };
+
+        declare type RunEngineProps<State> = {
+          initialState: State;
+          render: (state: State) => {
+            cursor?: "default" | "pointer";
+            renderables: Renderable[];
+          };
+          nextState: (props: NextStateProps<State>) => State;
+          resources?: Record<
+            string,
+            {
+              src: string;
+              size: { width: number; height: number };
+              slices: { vertical: number; horizontal: number };
+            }
+          >;
+        };
+
+        declare type RunEngineFunction = <State>(
+          props: RunEngineProps<State>
+        ) => Promise<void>;
+
+        declare const keyboardKeys = [
+          "ControlLeft",
+          "ControlRight",
+          "AltLeft",
+          "AltRight",
+          "CapsLock",
+
+          "End",
+          "Delete",
+          "Tab",
+          "Space",
+          "Enter",
+
+          "ArrowLeft",
+          "ArrowRight",
+          "ArrowUp",
+          "ArrowDown",
+
+          "Numpad0",
+          "Numpad1",
+          "Numpad2",
+          "Numpad3",
+          "Numpad4",
+          "Numpad5",
+          "Numpad6",
+          "Numpad7",
+          "Numpad8",
+          "Numpad9",
+
+          "Digit0",
+          "Digit1",
+          "Digit2",
+          "Digit3",
+          "Digit4",
+          "Digit5",
+          "Digit6",
+          "Digit7",
+          "Digit8",
+          "Digit9",
+
+          "KeyA",
+          "KeyB",
+          "KeyC",
+          "KeyD",
+          "KeyE",
+          "KeyF",
+          "KeyG",
+          "KeyH",
+          "KeyI",
+          "KeyJ",
+          "KeyK",
+          "KeyL",
+          "KeyM",
+          "KeyN",
+          "KeyO",
+          "KeyP",
+          "KeyQ",
+          "KeyR",
+          "KeyS",
+          "KeyT",
+          "KeyU",
+          "KeyV",
+          "KeyW",
+          "KeyX",
+          "KeyY",
+          "KeyZ",
+        ] as const;
+
+        declare type KeyboardKeys = (typeof keyboardKeys)[number];
+        declare type KeyboardState = Record<KeyboardKeys, boolean>;
+
+        declare var Luna: {
+          runEngine: RunEngineFunction;
+        };
+
             `;
 
         const lunasContextModel = monaco.editor.createModel(
@@ -248,54 +430,85 @@
           document.getElementById("editorContainer"),
           {
             value: `
-type GameState = { counter: number }
+// Cookie clicker
 
+// Create a type for the state of your game
+type GameState = { cookies: number };
+
+// Create the initial state
 const initialState: GameState = {
-    counter: 0
+  cookies: 0,
 };
 
-const nextFrame: (props: { state: GameState }) => GameState = (props) => {
-    return props.state;
-}
+// Create a function that renders the game, based on the state
+type RenderFunction = (state: GameState) => { renderables: Renderable[] };
+const render: RenderFunction = (state) => {
+  return {
+    renderables: [
+      // Renders a text display for the number of cookies
+      {
+        type: "TEXT",
+        text: \`\${state.cookies} cookies\`,
+        color: "black",
 
-const render: (state: GameState) => { cursor: "default", renderables: [] } = (state) => ({
-    cursor: "default", renderables: [
-        {
-            id: "cookie-counter-display",
-            type: "TEXT",
-            color: "black",
-            position: {
-                x: 100,
-                y: 50,
-            },
-            text: \`\${state.counter} cookies\`,
-            align: {
-                x: "left",
-                y: "middle",
-            },
+        position: {
+          x: 100,
+          y: 50,
         },
 
-        {
-            type: "CIRCLE",
-            id: "cookie",
-            color: "brown",
-            position: {
-                x: 50,
-                y: 50,
-            },
-            radius: 25,
-
-            onClick: (state) => ({ counter: state.counter + 1 }),
+        align: {
+          x: "left",
+          y: "middle",
         },
-    ] as any
-})
+      },
 
-Luna.runEngine<GameState, string>({
-    initialState,
-    nextFrame,
-    render,
-    resources: {}
-})
+      // Renders a cookie: a clickable brown circle
+      {
+        type: "CIRCLE",
+        color: "brown",
+
+        isClickable: true,
+        id: "cookie",
+
+        position: {
+          x: 50,
+          y: 50,
+        },
+        radius: 25,
+      },
+    ],
+  };
+};
+
+// Create a function that handles the game state
+// Ask youself: "given the current game state, if an event happens, what should the next state be?"
+type NextStateFunction = (props: {
+  state: GameState;
+  event: GameEvent;
+}) => GameState;
+
+const nextState: NextStateFunction = (props) => {
+  // If the event is a "cookie is clicked" event
+  if (props.event.tag === "CLICK" && props.event.id === "cookie") {
+    return {
+      // Sums 1 in the cookies counter
+      cookies: props.state.cookies + 1,
+    };
+  }
+
+  // Else, state remains unchanged
+  return props.state;
+};
+
+// Runs the engine
+Luna.runEngine<GameState>({
+  initialState,
+  nextState,
+  render,
+});
+
+
+
             `.trim(),
             language: "typescript",
             theme: "vs-dark",
