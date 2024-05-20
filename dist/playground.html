@@ -46,6 +46,8 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
     />
+
+    <script src="https://unpkg.com/monaco-editor@0.30.1/min/vs/loader.js"></script>
   </head>
 
   <script src="./bundle.js"></script>
@@ -111,13 +113,6 @@
                 >
                   <div style="margin: 5px 10px">Editor:</div>
                   <div class="hstack" style="margin-left: auto">
-                    <!-- <button
-                      type="button"
-                      class="btn btn-dark settings bi-arrows-fullscreen btn btn-primary"
-                      style="font-size: 20px; padding: 0px 4px"
-                      onclick="Close()"
-                    ></button> -->
-
                     <select class="form-select form-select-sm">
                       <option value="" disabled="" hidden="">
                         Select an example...
@@ -135,7 +130,7 @@
             </div>
           </div>
         </div>
-        <div id="aaaa" class="col-md">
+        <div class="col-md">
           <div
             style="
               display: flex;
@@ -169,20 +164,22 @@
                     class="d-flex gap-2 align-items-center"
                     style="margin-left: auto"
                   >
-                    <!-- <div class="text-nowrap form-check">
+                    <div class="text-nowrap form-check">
                       <input
                         type="checkbox"
                         class="form-check-input"
                         checked=""
+                        onchange="onAutoReloadToggle(event.target.checked)"
                       /><label title="" class="form-check-label"
                         >Auto-Reload</label
                       >
-                    </div> -->
+                    </div>
                     <button
                       type="button"
-                      class="btn settings bi-arrow-clockwise btn-dark btn btn-primary"
+                      id="autoreload-button"
+                      class="btn settings bi-arrow-clockwise btn-dark"
                       style="font-size: 20px; padding: 0px 4px"
-                      onclick="runCode()"
+                      onclick="updatePreview()"
                     ></button>
                   </div>
                 </div>
@@ -202,16 +199,19 @@
       </div>
     </div>
 
-    <!-- Include the Monaco Editor library -->
-    <script src="https://unpkg.com/monaco-editor@0.30.1/min/vs/loader.js"></script>
     <script>
-      // Configure Monaco Editor
+      let autoReload = true;
+
+      function onAutoReloadToggle(checked) {
+        autoReload = checked;
+      }
+
       require.config({
         paths: { vs: "https://unpkg.com/monaco-editor@0.30.1/min/vs" },
       });
+
       require(["vs/editor/editor.main"], function () {
-        // Define the custom function type
-        const customFunctionType = `
+        const lunasContext = `
         declare var Luna: { runEngine: <State, ResourceId extends string>(props: {
         resources: Record<
             ResourceId,
@@ -238,14 +238,12 @@
         }
             `;
 
-        // Create a model for the custom function type
-        const customFunctionModel = monaco.editor.createModel(
-          customFunctionType,
+        const lunasContextModel = monaco.editor.createModel(
+          lunasContext,
           "typescript",
-          monaco.Uri.parse("inmemory://model/customFunction.d.ts")
+          monaco.Uri.parse("inmemory://model/lunasContext.d.ts")
         );
 
-        // Create the editor
         window.editor = monaco.editor.create(
           document.getElementById("editorContainer"),
           {
@@ -305,45 +303,63 @@ Luna.runEngine<GameState, string>({
           }
         );
 
-        // Add the custom function type model to the editor
         monaco.languages.typescript.typescriptDefaults.addExtraLib(
-          customFunctionType,
-          "inmemory://model/customFunction.d.ts"
+          lunasContext,
+          "inmemory://model/lunasContext.d.ts"
         );
+
+        window.editor.onDidChangeModelContent(() => {
+          if (!autoReload) {
+            setAutoReloadButtonState(true);
+            return;
+          }
+
+          updatePreview();
+        });
+
+        updatePreview();
       });
 
-      function Close() {
-        const editor = document.getElementById("aaaa");
+      function setAutoReloadButtonState(state) {
+        const button = document.getElementById("autoreload-button");
 
-        if (editor.style.display === "none") {
-          editor.style.display = "";
+        if (state) {
+          button.classList.remove("btn-dark");
+          button.classList.add("btn-primary");
         } else {
-          editor.style.display = "none";
+          button.classList.add("btn-dark");
+          button.classList.remove("btn-primary");
         }
       }
 
-      // Function to compile and run the TypeScript code
-      function runCode() {
-        const outputElement = document.getElementById("output");
-        const value = window.editor.getValue();
+      function updatePreview() {
+        setAutoReloadButtonState(false);
 
-        // Use Monaco's TypeScript worker to get the compiled JavaScript
         monaco.languages.typescript.getTypeScriptWorker().then((worker) => {
-          worker(window.editor.getModel().uri).then((client) => {
-            client
-              .getEmitOutput(window.editor.getModel().uri.toString())
-              .then((result) => {
-                const compiledCode = result.outputFiles[0].text;
+          const uri = window.editor.getModel().uri;
 
-                try {
-                  eval(compiledCode);
-                } catch (error) {
-                  console.error("Error running the compiled code:", error);
-                }
-              });
-          });
+          worker(uri).then((client) =>
+            client.getEmitOutput(uri.toString()).then((result) => {
+              const compiledCode = result.outputFiles[0].text;
+
+              try {
+                eval(compiledCode);
+              } catch (error) {
+                console.error("Error running the compiled code:", error);
+              }
+            })
+          );
         });
       }
+
+      function updateCanvasRatio() {
+        const canvas = document.getElementById("luna");
+        canvas.height = canvas.clientHeight;
+        canvas.width = canvas.clientWidth;
+      }
+
+      updateCanvasRatio();
+      window.onresize = updateCanvasRatio;
     </script>
   </body>
 </html>
