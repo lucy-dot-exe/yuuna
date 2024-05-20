@@ -5,6 +5,7 @@ export default {
   output: {
     file: "dist/bundle.js", // output bundle
     format: "iife", // immediately-invoked function expression for browsers
+    name: "Luna",
     sourcemap: true, // generate sourcemap for debugging
   },
   plugins: [

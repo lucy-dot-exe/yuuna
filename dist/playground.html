@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Playground - Luna</title>
+    <style>
+      #editorContainer {
+        width: 100%;
+        height: 800px;
+      }
+
+      #luna {
+        background-color: #0d1831;
+      }
+
+      body {
+        margin: 0px;
+      }
+
+      canvas {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        outline: none;
+        -webkit-tap-highlight-color: rgba(255, 255, 255, 0); /* mobile webkit */
+      }
+    </style>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+  </head>
+
+  <script src="./bundle.js"></script>
+
+  <body>
+    <header class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
+      <nav class="container">
+        <a class="navbar-brand" href="#">🌙 Luna</a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a class="nav-link" aria-current="page" href="#">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link active" href="#">Playground</a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+    </header>
+
+    <div class="content" style="margin-inline: 10px">
+      <div class="h-100 g-2 mt-1 row" style="flex-wrap: wrap-reverse">
+        <div class="col-md">
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              align-items: stretch;
+              width: 100%;
+              height: 100%;
+            "
+          >
+            <div style="flex: 1 1 0%">
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  align-items: stretch;
+                  width: 100%;
+                  height: 100%;
+                "
+              >
+                <div
+                  style="
+                    display: flex;
+                    flex-direction: row;
+                    align-items: stretch;
+                    width: 100%;
+                    margin-bottom: 6px;
+                  "
+                >
+                  <div style="margin: 5px 10px">Editor:</div>
+                  <div class="hstack" style="margin-left: auto">
+                    <!-- <button
+                      type="button"
+                      class="btn btn-dark settings bi-arrows-fullscreen btn btn-primary"
+                      style="font-size: 20px; padding: 0px 4px"
+                      onclick="Close()"
+                    ></button> -->
+
+                    <select class="form-select form-select-sm">
+                      <option value="" disabled="" hidden="">
+                        Select an example...
+                      </option>
+                      <optgroup label="Games">
+                        <option value="1">Cookie Clicker</option>
+                      </optgroup>
+                    </select>
+                  </div>
+                </div>
+                <div style="flex: 1 1 0%">
+                  <div id="editorContainer"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="aaaa" class="col-md">
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              align-items: stretch;
+              width: 100%;
+              height: 100%;
+            "
+          >
+            <div style="flex: 1 1 0%">
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  align-items: stretch;
+                  width: 100%;
+                  height: 100%;
+                "
+              >
+                <div
+                  style="
+                    display: flex;
+                    flex-direction: row;
+                    align-items: stretch;
+                    width: 100%;
+                    margin-bottom: 6px;
+                  "
+                >
+                  <div style="margin: 5px 10px">Preview:</div>
+                  <div
+                    class="d-flex gap-2 align-items-center"
+                    style="margin-left: auto"
+                  >
+                    <!-- <div class="text-nowrap form-check">
+                      <input
+                        type="checkbox"
+                        class="form-check-input"
+                        checked=""
+                      /><label title="" class="form-check-label"
+                        >Auto-Reload</label
+                      >
+                    </div> -->
+                    <button
+                      type="button"
+                      class="btn settings bi-arrow-clockwise btn-dark btn btn-primary"
+                      style="font-size: 20px; padding: 0px 4px"
+                      onclick="runCode()"
+                    ></button>
+                  </div>
+                </div>
+
+                <div style="flex: 1 1 0%">
+                  <canvas
+                    id="luna"
+                    width="960px"
+                    height="800px"
+                    style="width: 100%; height: 800px"
+                  ></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Include the Monaco Editor library -->
+    <script src="https://unpkg.com/monaco-editor@0.30.1/min/vs/loader.js"></script>
+    <script>
+      // Configure Monaco Editor
+      require.config({
+        paths: { vs: "https://unpkg.com/monaco-editor@0.30.1/min/vs" },
+      });
+      require(["vs/editor/editor.main"], function () {
+        // Define the custom function type
+        const customFunctionType = `
+        declare var Luna: { runEngine: <State, ResourceId extends string>(props: {
+        resources: Record<
+            ResourceId,
+            {
+            src: string;
+            size: { width: number; height: number };
+            slices: { vertical: number; horizontal: number };
+            }
+        >;
+        initialState: State;
+        nextFrame: (params: {
+            state: State;
+            delta: number;
+            keyboard: Record<
+            string,
+            { isPressed: boolean; isJustPressed: boolean; isJustReleased: boolean }
+            >;
+        }) => State;
+        render: (state: State) => {
+            cursor: "default" | "pointer";
+            renderables: [];
+        };
+        }) => Promise<void>
+        }
+            `;
+
+        // Create a model for the custom function type
+        const customFunctionModel = monaco.editor.createModel(
+          customFunctionType,
+          "typescript",
+          monaco.Uri.parse("inmemory://model/customFunction.d.ts")
+        );
+
+        // Create the editor
+        window.editor = monaco.editor.create(
+          document.getElementById("editorContainer"),
+          {
+            value: `
+type GameState = { counter: number }
+
+const initialState: GameState = {
+    counter: 0
+};
+
+const nextFrame: (props: { state: GameState }) => GameState = (props) => {
+    return props.state;
+}
+
+const render: (state: GameState) => { cursor: "default", renderables: [] } = (state) => ({
+    cursor: "default", renderables: [
+        {
+            id: "cookie-counter-display",
+            type: "TEXT",
+            color: "black",
+            position: {
+                x: 100,
+                y: 50,
+            },
+            text: \`\${state.counter} cookies\`,
+            align: {
+                x: "left",
+                y: "middle",
+            },
+        },
+
+        {
+            type: "CIRCLE",
+            id: "cookie",
+            color: "brown",
+            position: {
+                x: 50,
+                y: 50,
+            },
+            radius: 25,
+
+            onClick: (state) => ({ counter: state.counter + 1 }),
+        },
+    ] as any
+})
+
+Luna.runEngine<GameState, string>({
+    initialState,
+    nextFrame,
+    render,
+    resources: {}
+})
+            `.trim(),
+            language: "typescript",
+            theme: "vs-dark",
+            automaticLayout: true,
+          }
+        );
+
+        // Add the custom function type model to the editor
+        monaco.languages.typescript.typescriptDefaults.addExtraLib(
+          customFunctionType,
+          "inmemory://model/customFunction.d.ts"
+        );
+      });
+
+      function Close() {
+        const editor = document.getElementById("aaaa");
+
+        if (editor.style.display === "none") {
+          editor.style.display = "";
+        } else {
+          editor.style.display = "none";
+        }
+      }
+
+      // Function to compile and run the TypeScript code
+      function runCode() {
+        const outputElement = document.getElementById("output");
+        const value = window.editor.getValue();
+
+        // Use Monaco's TypeScript worker to get the compiled JavaScript
+        monaco.languages.typescript.getTypeScriptWorker().then((worker) => {
+          worker(window.editor.getModel().uri).then((client) => {
+            client
+              .getEmitOutput(window.editor.getModel().uri.toString())
+              .then((result) => {
+                const compiledCode = result.outputFiles[0].text;
+
+                try {
+                  eval(compiledCode);
+                } catch (error) {
+                  console.error("Error running the compiled code:", error);
+                }
+              });
+          });
+        });
+      }
+    </script>
+  </body>
+</html>

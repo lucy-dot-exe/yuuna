@@ -9,6 +9,8 @@ import { KeyboardKeys, keyboardKeys } from "./keyboardKeys";
 
 type KeyboardState = Record<KeyboardKeys, boolean>;
 
+let resetCanvas: (() => void) | null = null;
+
 export async function runEngine<State, ResourceId extends string>(props: {
   resources: Record<
     ResourceId,
@@ -31,7 +33,33 @@ export async function runEngine<State, ResourceId extends string>(props: {
     cursor: "default" | "pointer";
     renderables: Renderable<State, ResourceId>[];
   };
-}) {
+}): Promise<void>;
+
+export async function runEngine<State, ResourceId extends string>(props: {
+  resources: Record<
+    ResourceId,
+    {
+      src: string;
+      size: { width: number; height: number };
+      slices: { vertical: number; horizontal: number };
+    }
+  >;
+  initialState: State;
+  nextFrame: (params: {
+    state: State;
+    delta: number;
+    keyboard: Record<
+      KeyboardKeys,
+      { isPressed: boolean; isJustPressed: boolean; isJustReleased: boolean }
+    >;
+  }) => State;
+  render: (state: State) => {
+    cursor: "default" | "pointer";
+    renderables: Renderable<State, ResourceId>[];
+  };
+}): Promise<void> {
+  resetCanvas?.();
+
   const canvas = window.document.getElementById("luna");
 
   if (canvas === null) {
@@ -247,7 +275,7 @@ export async function runEngine<State, ResourceId extends string>(props: {
 
   context.imageSmoothingEnabled = false;
 
-  setInterval(() => {
+  const intervalId = setInterval(() => {
     const now = Date.now();
     const delta = now - lastFrame;
 
@@ -359,4 +387,8 @@ export async function runEngine<State, ResourceId extends string>(props: {
     lastFrame = now;
     previousState.keyboardState = { ...currentState.keyboardState };
   }, 0);
+
+  resetCanvas = () => {
+    clearInterval(intervalId);
+  };
 }
