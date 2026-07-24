@@ -93,4 +93,4 @@ visitors can edit and run a game directly on the page.
 
 ## License
 
-MIT © [luci-dot-exe](https://github.com/lucy-dot-exe)
+MIT © [lucy-dot-exe](https://github.com/lucy-dot-exe)
