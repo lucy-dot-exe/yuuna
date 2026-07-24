@@ -28,11 +28,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lucy-dot-exe/luna.git"
+    "url": "git+https://github.com/lucy-dot-exe/yuuna.git"
   },
-  "homepage": "https://github.com/lucy-dot-exe/luna#readme",
+  "homepage": "https://github.com/lucy-dot-exe/yuuna#readme",
   "bugs": {
-    "url": "https://github.com/lucy-dot-exe/luna/issues"
+    "url": "https://github.com/lucy-dot-exe/yuuna/issues"
   },
   "scripts": {
     "build": "rollup -c",
