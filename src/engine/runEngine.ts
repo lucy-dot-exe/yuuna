@@ -19,14 +19,14 @@ export const runEngine: RunEngineFunction = async <State>(
 ) => {
   resetCanvas?.();
 
-  const canvas = window.document.getElementById("luna");
+  const canvas = window.document.getElementById("yuuna");
 
   if (canvas === null) {
-    throw new Error('No HTML element found with id "luna"');
+    throw new Error('No HTML element found with id "yuuna"');
   }
 
   if (!(canvas instanceof HTMLCanvasElement)) {
-    throw new Error('No Canvas element found with id "luna"');
+    throw new Error('No Canvas element found with id "yuuna"');
   }
 
   const context = canvas.getContext("2d");

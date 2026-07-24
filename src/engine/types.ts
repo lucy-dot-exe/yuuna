@@ -197,6 +197,6 @@ export const keyboardKeys = [
 export type KeyboardKeys = (typeof keyboardKeys)[number];
 export type KeyboardState = Record<KeyboardKeys, boolean>;
 
-export declare var Luna: {
+export declare var Yuuna: {
   runEngine: RunEngineFunction;
 };

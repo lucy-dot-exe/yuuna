@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Playground - Luna</title>
+    <title>Playground - Yuuna</title>
     <style>
       #editorContainer {
         width: 100%;
         height: 800px;
       }
 
-      #luna {
+      #yuuna {
         background-color: #0d1831;
       }
 
@@ -55,7 +55,7 @@
   <body>
     <header class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
       <nav class="container">
-        <a class="navbar-brand" href="#">🌙 Luna</a>
+        <a class="navbar-brand" href="#">🌙 Yuuna</a>
         <button
           class="navbar-toggler"
           type="button"
@@ -186,7 +186,7 @@
 
                 <div style="flex: 1 1 0%">
                   <canvas
-                    id="luna"
+                    id="yuuna"
                     width="960px"
                     height="800px"
                     style="width: 100%; height: 800px"
@@ -211,7 +211,7 @@
       });
 
       require(["vs/editor/editor.main"], function () {
-        const lunasContext = `
+        const yuunasContext = `
         declare type RectangleRenderable = {
           type: "RECTANGLE";
 
@@ -414,16 +414,16 @@
         declare type KeyboardKeys = (typeof keyboardKeys)[number];
         declare type KeyboardState = Record<KeyboardKeys, boolean>;
 
-        declare var Luna: {
+        declare var Yuuna: {
           runEngine: RunEngineFunction;
         };
 
             `;
 
-        const lunasContextModel = monaco.editor.createModel(
-          lunasContext,
+        const yuunasContextModel = monaco.editor.createModel(
+          yuunasContext,
           "typescript",
-          monaco.Uri.parse("inmemory://model/lunasContext.d.ts")
+          monaco.Uri.parse("inmemory://model/yuunasContext.d.ts")
         );
 
         window.editor = monaco.editor.create(
@@ -501,7 +501,7 @@ const nextState: NextStateFunction = (props) => {
 };
 
 // Runs the engine
-Luna.runEngine<GameState>({
+Yuuna.runEngine<GameState>({
   initialState,
   nextState,
   render,
@@ -517,8 +517,8 @@ Luna.runEngine<GameState>({
         );
 
         monaco.languages.typescript.typescriptDefaults.addExtraLib(
-          lunasContext,
-          "inmemory://model/lunasContext.d.ts"
+          yuunasContext,
+          "inmemory://model/yuunasContext.d.ts"
         );
 
         window.editor.onDidChangeModelContent(() => {
@@ -566,7 +566,7 @@ Luna.runEngine<GameState>({
       }
 
       function updateCanvasRatio() {
-        const canvas = document.getElementById("luna");
+        const canvas = document.getElementById("yuuna");
         canvas.height = canvas.clientHeight;
         canvas.width = canvas.clientWidth;
       }

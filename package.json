@@ -1,13 +1,43 @@
 {
-  "name": "luna",
-  "version": "1.0.0",
-  "main": "index.js",
-  "author": "luci-dot-exe<lucinadotexe@gmail.com>",
-  "license": "MIT",
+  "name": "yuuna-engine",
+  "version": "0.1.0",
+  "description": "A tiny state-machine-based 2D canvas game engine for TypeScript.",
   "type": "module",
+  "main": "./lib/index.cjs",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js",
+      "require": "./lib/index.cjs"
+    }
+  },
+  "files": [
+    "lib"
+  ],
+  "sideEffects": false,
+  "keywords": [
+    "game-engine",
+    "canvas",
+    "typescript",
+    "state-machine",
+    "2d"
+  ],
+  "author": "luci-dot-exe <lucinadotexe@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lucy-dot-exe/luna.git"
+  },
+  "homepage": "https://github.com/lucy-dot-exe/luna#readme",
+  "bugs": {
+    "url": "https://github.com/lucy-dot-exe/luna/issues"
+  },
   "scripts": {
     "build": "rollup -c",
-    "watch": "rollup -c -w"
+    "watch": "rollup -c -w",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "nodemon": "^3.1.0",

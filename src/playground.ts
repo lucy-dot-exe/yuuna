@@ -1,4 +1,4 @@
-import { GameEvent, Luna, Renderable } from "./engine/types";
+import { GameEvent, Yuuna, Renderable } from "./engine/types";
 
 // Cookie clicker
 
@@ -71,7 +71,7 @@ const nextState: NextStateFunction = (props) => {
 };
 
 // Runs the engine
-Luna.runEngine<GameState>({
+Yuuna.runEngine<GameState>({
   initialState,
   nextState,
   render,
