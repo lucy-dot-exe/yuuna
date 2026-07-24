@@ -1,24 +1,466 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" data-bs-theme="dark">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Yuuna — a tiny state-machine game engine</title>
+    <link rel="icon" type="image/png" href="./resources/yuuna.png" />
+    <style>
+      html {
+        scroll-behavior: smooth;
+      }
 
-    <title>Yuuna</title>
-
-    <style type="text/css">
       body {
         margin: 0px;
       }
 
-      canvas {
+      #editorContainer {
+        width: 100%;
+        height: 800px;
+      }
+
+      #yuuna {
         background-color: #0d1831;
       }
+
+      canvas {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        outline: none;
+        -webkit-tap-highlight-color: rgba(255, 255, 255, 0); /* mobile webkit */
+      }
+
+      .hero {
+        padding: 72px 0 56px;
+        text-align: center;
+      }
+
+      .install-snippet {
+        display: inline-block;
+        font-family: "Courier New", monospace;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 6px;
+        padding: 10px 18px;
+        margin: 20px 0;
+      }
+
+      .feature-card {
+        height: 100%;
+      }
     </style>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+
+    <script src="https://unpkg.com/monaco-editor@0.30.1/min/vs/loader.js"></script>
   </head>
 
   <script src="./bundle.js"></script>
 
   <body>
-    <canvas id="yuuna" width="960px" height="540px"></canvas>
+    <header
+      class="navbar navbar-expand-lg bg-primary sticky-top"
+      data-bs-theme="dark"
+    >
+      <nav class="container">
+        <a
+          class="navbar-brand d-flex align-items-center gap-2"
+          href="#top"
+        >
+          <img
+            src="./resources/yuuna.png"
+            alt=""
+            width="28"
+            height="28"
+            style="border-radius: 50%; object-fit: cover"
+          />
+          Yuuna
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a class="nav-link" href="#top">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#playground">Playground</a>
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link"
+                href="https://github.com/lucy-dot-exe/yuuna"
+                target="_blank"
+                rel="noopener"
+                >GitHub</a
+              >
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link"
+                href="https://www.npmjs.com/package/yuuna-engine"
+                target="_blank"
+                rel="noopener"
+                >npm</a
+              >
+            </li>
+          </ul>
+        </div>
+      </nav>
+    </header>
+
+    <div id="top" class="hero">
+      <div class="container">
+        <img
+          src="./resources/yuuna.png"
+          alt="Yuuna"
+          width="120"
+          height="120"
+          style="border-radius: 50%; object-fit: cover"
+        />
+        <h1 class="display-4 mt-3">Yuuna</h1>
+        <p class="lead">
+          A tiny state-machine-based 2D canvas game engine for TypeScript.
+        </p>
+        <p class="text-body-secondary" style="max-width: 640px; margin: 0 auto">
+          Describe your game as a <code>state</code>, a
+          <code>render(state)</code> function, and a
+          <code>nextState({ state, event, keyboard })</code> function — Yuuna
+          owns the render loop, input handling, and canvas drawing.
+        </p>
+
+        <div class="install-snippet">
+          <code>npm install yuuna-engine</code>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-center flex-wrap mt-3">
+          <a href="#playground" class="btn btn-light">Try it below</a>
+          <a
+            href="https://github.com/lucy-dot-exe/yuuna"
+            target="_blank"
+            rel="noopener"
+            class="btn btn-outline-light"
+            >View on GitHub</a
+          >
+        </div>
+      </div>
+    </div>
+
+    <div class="container mb-5">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="card feature-card bg-body-tertiary">
+            <div class="card-body">
+              <h5 class="card-title">Declarative renderables</h5>
+              <p class="card-text text-body-secondary">
+                Rectangles, circles, text, and sprites — described as plain
+                data, drawn to the canvas for you every frame.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card feature-card bg-body-tertiary">
+            <div class="card-body">
+              <h5 class="card-title">One state machine</h5>
+              <p class="card-text text-body-secondary">
+                Clicks, hovers, mouse movement, and frame ticks all flow
+                through a single <code>nextState</code> function.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card feature-card bg-body-tertiary">
+            <div class="card-body">
+              <h5 class="card-title">Runs anywhere</h5>
+              <p class="card-text text-body-secondary">
+                Ships as ESM, CJS, and typed for TypeScript — install it from
+                npm, or drop the browser bundle straight into a page.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="playground" class="content" style="margin-inline: 10px">
+      <div class="container">
+        <h2>Try it live</h2>
+        <p class="text-body-secondary">
+          Edit the TypeScript on the left — the canvas on the right runs it
+          as you type.
+        </p>
+      </div>
+      <div class="h-100 g-2 mt-1 row" style="flex-wrap: wrap-reverse">
+        <div class="col-md">
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              align-items: stretch;
+              width: 100%;
+              height: 100%;
+            "
+          >
+            <div style="flex: 1 1 0%">
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  align-items: stretch;
+                  width: 100%;
+                  height: 100%;
+                "
+              >
+                <div
+                  style="
+                    display: flex;
+                    flex-direction: row;
+                    align-items: stretch;
+                    width: 100%;
+                    margin-bottom: 6px;
+                  "
+                >
+                  <div style="margin: 5px 10px">Editor:</div>
+                  <div class="hstack" style="margin-left: auto">
+                    <select
+                      id="exampleSelect"
+                      class="form-select form-select-sm"
+                      onchange="loadExample(this.value)"
+                    >
+                      <optgroup label="Games">
+                        <option value="cookie-clicker.ts" selected>
+                          Cookie Clicker
+                        </option>
+                        <option value="square-dash.ts">Square Dash</option>
+                      </optgroup>
+                    </select>
+                  </div>
+                </div>
+                <div style="flex: 1 1 0%">
+                  <div id="editorContainer"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md">
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              align-items: stretch;
+              width: 100%;
+              height: 100%;
+            "
+          >
+            <div style="flex: 1 1 0%">
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  align-items: stretch;
+                  width: 100%;
+                  height: 100%;
+                "
+              >
+                <div
+                  style="
+                    display: flex;
+                    flex-direction: row;
+                    align-items: stretch;
+                    width: 100%;
+                    margin-bottom: 6px;
+                  "
+                >
+                  <div style="margin: 5px 10px">Preview:</div>
+                  <div
+                    class="d-flex gap-2 align-items-center"
+                    style="margin-left: auto"
+                  >
+                    <div class="text-nowrap form-check">
+                      <input
+                        type="checkbox"
+                        class="form-check-input"
+                        checked=""
+                        onchange="onAutoReloadToggle(event.target.checked)"
+                      /><label title="" class="form-check-label"
+                        >Auto-Reload</label
+                      >
+                    </div>
+                    <button
+                      type="button"
+                      id="autoreload-button"
+                      class="btn settings bi-arrow-clockwise btn-dark"
+                      style="font-size: 20px; padding: 0px 4px"
+                      onclick="updatePreview()"
+                    ></button>
+                  </div>
+                </div>
+
+                <div style="flex: 1 1 0%">
+                  <canvas
+                    id="yuuna"
+                    width="960px"
+                    height="800px"
+                    style="width: 100%; height: 800px"
+                  ></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="text-center text-body-secondary py-4 mt-4">
+      MIT ©
+      <a
+        href="https://github.com/lucy-dot-exe"
+        target="_blank"
+        rel="noopener"
+        class="link-secondary"
+        >luci-dot-exe</a
+      >
+    </footer>
+
+    <script>
+      let autoReload = true;
+
+      function onAutoReloadToggle(checked) {
+        autoReload = checked;
+      }
+
+      require.config({
+        paths: { vs: "https://unpkg.com/monaco-editor@0.30.1/min/vs" },
+      });
+
+      function fetchExample(fileName) {
+        return fetch(`./examples/${fileName}`).then((res) => res.text());
+      }
+
+      require(["vs/editor/editor.main"], async function () {
+        // Generated from src/engine/types.ts by
+        // scripts/generate-playground-assets.mjs — see package.json's
+        // `build`/`watch` scripts. Fetched instead of hardcoded so the
+        // playground's autocomplete never drifts from the real engine types.
+        const [yuunasContext, defaultExample] = await Promise.all([
+          fetch("./yuuna.d.ts").then((res) => res.text()),
+          fetchExample(document.getElementById("exampleSelect").value),
+        ]);
+
+        const yuunasContextModel = monaco.editor.createModel(
+          yuunasContext,
+          "typescript",
+          monaco.Uri.parse("inmemory://model/yuunasContext.d.ts")
+        );
+
+        window.editor = monaco.editor.create(
+          document.getElementById("editorContainer"),
+          {
+            value: defaultExample,
+            language: "typescript",
+            theme: "vs-dark",
+            automaticLayout: true,
+          }
+        );
+
+        monaco.languages.typescript.typescriptDefaults.addExtraLib(
+          yuunasContext,
+          "inmemory://model/yuunasContext.d.ts"
+        );
+
+        window.editor.onDidChangeModelContent(() => {
+          if (!autoReload) {
+            setAutoReloadButtonState(true);
+            return;
+          }
+
+          updatePreview();
+        });
+
+        updatePreview();
+      });
+
+      // Also written in examples/*.ts — this is what the playground's
+      // "Select an example..." dropdown fetches, so the games only exist
+      // in one place instead of being copied into this page by hand.
+      function loadExample(fileName) {
+        fetchExample(fileName).then((source) => {
+          window.editor.setValue(source);
+          updatePreview();
+        });
+      }
+
+      function setAutoReloadButtonState(state) {
+        const button = document.getElementById("autoreload-button");
+
+        if (state) {
+          button.classList.remove("btn-dark");
+          button.classList.add("btn-primary");
+        } else {
+          button.classList.add("btn-dark");
+          button.classList.remove("btn-primary");
+        }
+      }
+
+      function updatePreview() {
+        setAutoReloadButtonState(false);
+
+        monaco.languages.typescript.getTypeScriptWorker().then((worker) => {
+          const uri = window.editor.getModel().uri;
+
+          worker(uri).then((client) =>
+            client.getEmitOutput(uri.toString()).then((result) => {
+              const compiledCode = result.outputFiles[0].text;
+
+              try {
+                eval(compiledCode);
+              } catch (error) {
+                console.error("Error running the compiled code:", error);
+              }
+            })
+          );
+        });
+      }
+
+      function updateCanvasRatio() {
+        const canvas = document.getElementById("yuuna");
+        canvas.height = canvas.clientHeight;
+        canvas.width = canvas.clientWidth;
+      }
+
+      updateCanvasRatio();
+      window.onresize = updateCanvasRatio;
+    </script>
   </body>
 </html>

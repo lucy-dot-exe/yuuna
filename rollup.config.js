@@ -18,7 +18,7 @@ const libBuild = {
   ],
 };
 
-// Demo build: browser bundle used by dist/index.html and dist/playground.html
+// Demo build: browser bundle used by the landing page (dist/index.html)
 const demoBuild = {
   input: "src/index.ts",
   output: {

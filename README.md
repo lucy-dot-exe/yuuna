@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="dist/resources/yuuna.png" alt="Yuuna" width="120" height="120" />
+</p>
+
 # Yuuna
 
 A tiny state-machine-based 2D canvas game engine for TypeScript. You describe
@@ -77,12 +81,13 @@ runEngine<GameState>({
 
 ```sh
 yarn install
-yarn build   # builds lib/ (npm package) and dist/bundle.js (demo pages)
+yarn build   # builds lib/ (npm package) and dist/bundle.js (landing page)
 yarn watch   # rebuild on change
 ```
 
-`dist/index.html` and `dist/playground.html` are static demo pages that load
-`dist/bundle.js` directly in the browser via a global `Yuuna` object.
+`dist/index.html` is the landing page — it loads `dist/bundle.js` in the
+browser via a global `Yuuna` object and embeds a live Monaco editor so
+visitors can edit and run a game directly on the page.
 
 ## License
 

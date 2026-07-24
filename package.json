@@ -35,8 +35,8 @@
     "url": "https://github.com/lucy-dot-exe/yuuna/issues"
   },
   "scripts": {
-    "build": "rollup -c",
-    "watch": "rollup -c -w",
+    "build": "node scripts/generate-playground-assets.mjs && rollup -c",
+    "watch": "node scripts/generate-playground-assets.mjs && rollup -c -w",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {

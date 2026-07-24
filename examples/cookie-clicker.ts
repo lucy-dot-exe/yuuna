@@ -1,5 +1,3 @@
-import { GameEvent, Yuuna, Renderable } from "./engine/types";
-
 // Cookie clicker
 
 // Create a type for the state of your game
