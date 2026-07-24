@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Yuuna — a tiny state-machine game engine</title>
+    <title>Yuuna — a lightweight TypeScript game engine for quick prototypes</title>
     <link rel="icon" type="image/png" href="./resources/yuuna.png" />
     <style>
       html {
@@ -148,13 +148,15 @@
         />
         <h1 class="display-4 mt-3">Yuuna</h1>
         <p class="lead">
-          A tiny state-machine-based 2D canvas game engine for TypeScript.
+          A lightweight TypeScript game engine for quick prototypes.
         </p>
         <p class="text-body-secondary" style="max-width: 640px; margin: 0 auto">
+          Drop it into a page and it's running — no editor, no build step.
           Describe your game as a <code>state</code>, a
           <code>render(state)</code> function, and a
-          <code>nextState({ state, event, keyboard })</code> function — Yuuna
-          owns the render loop, input handling, and canvas drawing.
+          <code>nextState({ state, event, keyboard })</code> function, and
+          Yuuna owns the render loop, input handling, and canvas drawing.
+          Scratch paper for game ideas, not a replacement for Godot or Unity.
         </p>
 
         <div class="install-snippet">
@@ -179,10 +181,10 @@
         <div class="col-md-4">
           <div class="card feature-card bg-body-tertiary">
             <div class="card-body">
-              <h5 class="card-title">Declarative renderables</h5>
+              <h5 class="card-title">Small, on purpose</h5>
               <p class="card-text text-body-secondary">
-                Rectangles, circles, text, and sprites — described as plain
-                data, drawn to the canvas for you every frame.
+                Just a render loop and a state machine for canvas games —
+                light enough to go from idea to playable in minutes.
               </p>
             </div>
           </div>
@@ -201,10 +203,11 @@
         <div class="col-md-4">
           <div class="card feature-card bg-body-tertiary">
             <div class="card-body">
-              <h5 class="card-title">Runs anywhere</h5>
+              <h5 class="card-title">Runs in the browser</h5>
               <p class="card-text text-body-secondary">
-                Ships as ESM, CJS, and typed for TypeScript — install it from
-                npm, or drop the browser bundle straight into a page.
+                No build step required — drop the browser bundle in a
+                <code>&lt;script&gt;</code> tag and start prototyping, like
+                the playground below.
               </p>
             </div>
           </div>

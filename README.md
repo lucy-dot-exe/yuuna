@@ -4,10 +4,12 @@
 
 # Yuuna
 
-A tiny state-machine-based 2D canvas game engine for TypeScript. You describe
-your game as a `state`, a `render(state)` function, and a
-`nextState({ state, event, keyboard })` function — Yuuna owns the render loop,
-input handling, and canvas drawing.
+A lightweight, state-machine-based TypeScript game engine built for quick
+prototypes — drop it into a page and it's running, no editor or build step
+required. You describe your game as a `state`, a `render(state)` function,
+and a `nextState({ state, event, keyboard })` function — Yuuna owns the
+render loop, input handling, and canvas drawing. It's scratch paper for game
+ideas, not a replacement for Godot or Unity.
 
 ## Install
 

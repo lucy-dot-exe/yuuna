@@ -1,7 +1,7 @@
 {
   "name": "yuuna-engine",
   "version": "0.1.0",
-  "description": "A tiny state-machine-based 2D canvas game engine for TypeScript.",
+  "description": "A lightweight, state-machine-based TypeScript game engine for quick prototypes. Runs directly in the browser.",
   "type": "module",
   "main": "./lib/index.cjs",
   "module": "./lib/index.js",
@@ -22,7 +22,9 @@
     "canvas",
     "typescript",
     "state-machine",
-    "2d"
+    "2d",
+    "prototyping",
+    "browser"
   ],
   "author": "luci-dot-exe <lucinadotexe@gmail.com>",
   "license": "MIT",
