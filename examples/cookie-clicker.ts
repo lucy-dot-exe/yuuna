@@ -17,7 +17,7 @@ const render: RenderFunction = (state) => {
       {
         type: "TEXT",
         text: `${state.cookies} cookies`,
-        color: "black",
+        color: "white",
 
         position: {
           x: 100,
