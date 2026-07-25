@@ -70,8 +70,9 @@ runEngine<GameState>({
 ## Concepts
 
 - **Renderables** — declarative shapes drawn each frame: `RECTANGLE`,
-  `CIRCLE`, `TEXT`, and `SPRITE`. Give one an `id` plus `isClickable` /
-  `isHoverable` / `trackMouseMovement` to make it interactive.
+  `CIRCLE`, `TEXT`, `SPRITE`, and `LINE`. Give one an `id` plus
+  `isClickable` / `isHoverable` / `trackMouseMovement` to make it
+  interactive.
 - **Events** — your `nextState` function receives one `GameEvent` per call:
   `TIME` (frame tick with `delta`), `CLICK`, `HOVER_IN`, `HOVER_OUT`, or
   `MOUSE_MOVE`.
@@ -80,11 +81,42 @@ runEngine<GameState>({
   `isPressed` / `isJustPressed` / `isJustReleased`.
 - **Sprites** — pass a `resources` map of `{ src, size, slices }` to
   `runEngine` to load spritesheets, then reference them by id with a
-  `SPRITE` renderable's `resourceId` and `frame`.
+  `SPRITE` renderable's `resourceId` and `frame`. Set `flipX: true` to
+  mirror a sprite horizontally — useful when the art is drawn facing one
+  direction but needs to move the other way.
 - **Canvas** — pass `canvas: { width, height, backgroundColor }` to
   `runEngine` to size and color the canvas from code. All three are
   optional; anything you don't set falls back to the canvas element's
   existing HTML/CSS.
+- **Mechanics** — `nextState` can also be an array of small
+  `NextStateFunction`s instead of one big function. Each one is run in
+  order for every event, and can return:
+  - a new state, to update to
+  - `undefined` (or no `return` at all) — no change, but the rest of the
+    list still runs, so a guard can just be `if (...) return;`
+  - `STOP` (imported from `yuuna-engine`) — no change, and the rest of
+    the list is skipped for this event, so a shared rule (like "nothing
+    happens once the game is over") only needs to be written once
+
+  ```ts
+  import { runEngine, STOP, type NextStateFunction } from "yuuna-engine";
+
+  const freezeOnGameOver: NextStateFunction<GameState> = ({ state }) => {
+    if (state.lives <= 0) return STOP;
+  };
+
+  const moveEnemies: NextStateFunction<GameState> = ({ state, event }) => {
+    if (event.tag === "TIME") {
+      return { ...state, enemies: move(state.enemies, event.delta) };
+    }
+  };
+
+  runEngine<GameState>({
+    initialState,
+    render,
+    nextState: [freezeOnGameOver, moveEnemies /* ... */],
+  });
+  ```
 
 ## Development
 
