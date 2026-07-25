@@ -323,7 +323,7 @@ export const runEngine: RunEngineFunction = async <State>(
         const frame = {
           x: renderable.frame % resource.slices.horizontal,
           y:
-            Math.floor(renderable.frame / resource.slices.vertical) %
+            Math.floor(renderable.frame / resource.slices.horizontal) %
             resource.slices.vertical,
         };
 
