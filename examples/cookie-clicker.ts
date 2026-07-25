@@ -8,41 +8,45 @@ const initialState: GameState = {
   cookies: 0,
 };
 
+// Center the cookie + label as a group in the middle of the canvas
+const CENTER = { x: 480, y: 270 };
+
 // Create a function that renders the game, based on the state
 type RenderFunction = (state: GameState) => { renderables: Renderable[] };
 const render: RenderFunction = (state) => {
   return {
     renderables: [
-      // Renders a text display for the number of cookies
+      // Renders a cookie: a clickable chocolate-brown circle
+      {
+        type: "CIRCLE",
+        color: "#6B4423",
+
+        isClickable: true,
+        id: "cookie",
+
+        position: {
+          x: CENTER.x - 50,
+          y: CENTER.y,
+        },
+        radius: 30,
+      },
+
+      // Renders a text display for the number of cookies, vertically
+      // centered against the cookie
       {
         type: "TEXT",
         text: `${state.cookies} cookies`,
         color: "white",
 
         position: {
-          x: 100,
-          y: 50,
+          x: CENTER.x,
+          y: CENTER.y,
         },
 
         align: {
           x: "left",
           y: "middle",
         },
-      },
-
-      // Renders a cookie: a clickable brown circle
-      {
-        type: "CIRCLE",
-        color: "brown",
-
-        isClickable: true,
-        id: "cookie",
-
-        position: {
-          x: 50,
-          y: 50,
-        },
-        radius: 25,
       },
     ],
   };
@@ -73,4 +77,6 @@ Yuuna.runEngine<GameState>({
   initialState,
   nextState,
   render,
+
+  canvas: { width: 960, height: 540, backgroundColor: "#0d1831" },
 });
