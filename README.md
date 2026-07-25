@@ -22,7 +22,7 @@ npm install yuuna-engine
 Add a canvas with `id="yuuna"` to your page:
 
 ```html
-<canvas id="yuuna" width="960" height="540"></canvas>
+<canvas id="yuuna"></canvas>
 ```
 
 Then describe your game as state + render + nextState:
@@ -34,6 +34,9 @@ type GameState = { cookies: number };
 
 runEngine<GameState>({
   initialState: { cookies: 0 },
+
+  // Optional — size and color the canvas from code instead of HTML/CSS
+  canvas: { width: 960, height: 540, backgroundColor: "#0d1831" },
 
   render: (state) => ({
     renderables: [
@@ -78,6 +81,10 @@ runEngine<GameState>({
 - **Sprites** — pass a `resources` map of `{ src, size, slices }` to
   `runEngine` to load spritesheets, then reference them by id with a
   `SPRITE` renderable's `resourceId` and `frame`.
+- **Canvas** — pass `canvas: { width, height, backgroundColor }` to
+  `runEngine` to size and color the canvas from code. All three are
+  optional; anything you don't set falls back to the canvas element's
+  existing HTML/CSS.
 
 ## Development
 

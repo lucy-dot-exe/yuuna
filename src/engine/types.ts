@@ -120,6 +120,11 @@ export type RunEngineProps<State> = {
       slices: { vertical: number; horizontal: number };
     }
   >;
+  canvas?: {
+    width?: number;
+    height?: number;
+    backgroundColor?: string;
+  };
 };
 
 export type RunEngineFunction = <State>(

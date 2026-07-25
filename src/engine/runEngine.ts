@@ -1,6 +1,5 @@
 import { exhaust } from "../utils/exhaust";
 import { Position } from "../utils/Position";
-import { CONSTANTS } from "../utils/constants";
 import { iterateRecord, iterateRecordAsync } from "../utils/iterateRecord";
 import { createRecord } from "../utils/createRecord";
 import {
@@ -33,6 +32,18 @@ export const runEngine: RunEngineFunction = async <State>(
 
   if (context === null) {
     throw new Error("Failed to get context from canvas");
+  }
+
+  if (props.canvas?.width !== undefined) {
+    canvas.width = props.canvas.width;
+  }
+
+  if (props.canvas?.height !== undefined) {
+    canvas.height = props.canvas.height;
+  }
+
+  if (props.canvas?.backgroundColor !== undefined) {
+    canvas.style.backgroundColor = props.canvas.backgroundColor;
   }
 
   let state: State = props.initialState;
@@ -243,7 +254,7 @@ export const runEngine: RunEngineFunction = async <State>(
 
     events.splice(0, events.length);
 
-    context.clearRect(0, 0, CONSTANTS.WINDOW.WIDTH, CONSTANTS.WINDOW.HEIGHT);
+    context.clearRect(0, 0, canvas.width, canvas.height);
 
     const { cursor, renderables } = props.render(state);
 
