@@ -146,6 +146,18 @@ export const runEngine: RunEngineFunction = async <State>(
     exhaust(r);
   }
 
+  // ev.offsetX/offsetY are in CSS-rendered pixels, which differ from the
+  // canvas's drawing-buffer resolution whenever it's displayed at a
+  // different size (e.g. scaled down to fit its container). Renderable
+  // positions are all in buffer coordinates, so mouse coordinates need
+  // the same conversion to line up.
+  const getCanvasPosition = (ev: MouseEvent): Position => {
+    return {
+      x: (ev.offsetX * canvas.width) / canvas.clientWidth,
+      y: (ev.offsetY * canvas.height) / canvas.clientHeight,
+    };
+  };
+
   const updateState = (updateFn: (state: State) => State) => {
     state = updateFn(state);
   };
@@ -156,7 +168,7 @@ export const runEngine: RunEngineFunction = async <State>(
   const events: GameEvent[] = [];
 
   canvas.addEventListener("click", (ev) => {
-    const mouse: Position = { x: ev.offsetX, y: ev.offsetY };
+    const mouse: Position = getCanvasPosition(ev);
 
     if (hoveredId === null) return;
 
@@ -203,7 +215,7 @@ export const runEngine: RunEngineFunction = async <State>(
   });
 
   canvas.addEventListener("mousemove", (ev) => {
-    const mouse = { x: ev.offsetX, y: ev.offsetY };
+    const mouse = getCanvasPosition(ev);
 
     const { renderables } = props.render(state);
 
@@ -227,7 +239,7 @@ export const runEngine: RunEngineFunction = async <State>(
   });
 
   canvas.addEventListener("mousemove", (ev) => {
-    const mouse = { x: ev.offsetX, y: ev.offsetY };
+    const mouse = getCanvasPosition(ev);
 
     if (hoveredId === null) {
       return;
