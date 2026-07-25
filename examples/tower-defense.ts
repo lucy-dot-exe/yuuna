@@ -15,7 +15,23 @@ const BEAM_DURATION = 120; // milliseconds the firing line stays visible
 
 const ENEMY_SPEED = 0.05; // pixels per millisecond
 const ENEMY_HP_TIERS = [1, 2, 4, 8]; // each spawn is randomly one of these
-const ENEMY_RADIUS = 14;
+
+const SKELETON_FRAME_SIZE = 16; // native pixels per frame, before scale
+const SKELETON_FRAME_COUNT = 3;
+const SKELETON_SCALE = 4;
+const WALK_FRAME_DURATION = 150; // milliseconds each animation frame is shown
+
+const EXPLOSION_FRAME_SIZE = 64; // native pixels per frame, before scale
+const EXPLOSION_FRAME_COUNT = 12;
+const EXPLOSION_SCALE = 1.5;
+const EXPLOSION_FRAME_DURATION = 40; // milliseconds each animation frame is shown
+const EXPLOSION_DURATION = EXPLOSION_FRAME_COUNT * EXPLOSION_FRAME_DURATION;
+
+const TERRAIN_TILE_SIZE = 16; // native pixels per tile, before scale
+const TERRAIN_TILE_COUNT = 16;
+const TERRAIN_SCALE = 4;
+const TERRAIN_PATH_FRAME = 0; // first frame: dirt
+const TERRAIN_BACKGROUND_FRAME = TERRAIN_TILE_COUNT - 1; // last frame: grass
 
 // Enemies spawn in repeating 20s waves: each wave starts spaced out, gets
 // denser toward the middle, then spaces back out again — and every new
@@ -44,20 +60,42 @@ const hpTiersAt = (elapsed: number): number[] => {
   return ENEMY_HP_TIERS.slice(0, maxTierIndex + 1);
 };
 
-// Damage is always dealt 1 point at a time, so an enemy's hp passes
-// through every one of these thresholds on its way down — its color
-// doubles as a health readout instead of shrinking its radius
-const colorForHp = (hp: number): string => {
-  if (hp >= 8) return "#8b0000";
-  if (hp >= 4) return "#d62828";
-  if (hp >= 2) return "#f77f00";
-  return "#fcbf49";
+// Repeats one terrain tile across a rectangular area — there's no
+// built-in pattern fill, so this just lays down a grid of SPRITEs. Takes
+// the same { position, size } shape as a RECTANGLE renderable, so the
+// same area can be reused for both the visual tiling and a click target.
+const tileGrid = (
+  area: { position: { x: number; y: number }; size: { width: number; height: number } },
+  frame: number
+): Renderable[] => {
+  const displayTileSize = TERRAIN_TILE_SIZE * TERRAIN_SCALE;
+  const columns = Math.ceil(area.size.width / displayTileSize);
+  const rows = Math.ceil(area.size.height / displayTileSize);
+  const tiles: Renderable[] = [];
+
+  for (let row = 0; row < rows; row++) {
+    for (let column = 0; column < columns; column++) {
+      tiles.push({
+        type: "SPRITE",
+        resourceId: "terrain",
+        frame,
+        scale: TERRAIN_SCALE,
+        position: {
+          x: area.position.x + column * displayTileSize,
+          y: area.position.y + row * displayTileSize,
+        },
+      });
+    }
+  }
+
+  return tiles;
 };
 
 // Create a type for the state of your game
 type Enemy = { id: number; x: number; hp: number; maxHp: number };
 type Turret = { id: number; x: number; y: number; cooldown: number };
 type Beam = { from: { x: number; y: number }; to: { x: number; y: number }; timeLeft: number };
+type Explosion = { x: number; y: number; age: number };
 type GameState = {
   enemies: Enemy[];
   nextEnemyId: number;
@@ -66,6 +104,7 @@ type GameState = {
   turrets: Turret[];
   nextTurretId: number;
   beams: Beam[];
+  explosions: Explosion[];
   lives: number;
   score: number;
   gold: number;
@@ -80,6 +119,7 @@ const initialState: GameState = {
   turrets: [{ id: 0, x: CANVAS_WIDTH / 2, y: LANE_Y - 80, cooldown: 0 }],
   nextTurretId: 1,
   beams: [],
+  explosions: [],
   lives: START_LIVES,
   score: 0,
   gold: 0,
@@ -88,33 +128,29 @@ const initialState: GameState = {
 // Create a function that renders the game, based on the state
 type RenderFunction = (state: GameState) => { renderables: Renderable[] };
 const render: RenderFunction = (state) => {
-  const renderables: Renderable[] = [
-    // Buildable ground, above and below the path — clicking either builds
-    // a turret at that spot
-    {
-      type: "RECTANGLE",
-      color: "#0d1831",
-      isClickable: true,
-      id: "build-area",
-      position: { x: 0, y: 0 },
-      size: { width: CANVAS_WIDTH, height: LANE_Y - LANE_HEIGHT / 2 },
-    },
-    {
-      type: "RECTANGLE",
-      color: "#0d1831",
-      isClickable: true,
-      id: "build-area",
-      position: { x: 0, y: LANE_Y + LANE_HEIGHT / 2 },
-      size: { width: CANVAS_WIDTH, height: CANVAS_HEIGHT - (LANE_Y + LANE_HEIGHT / 2) },
-    },
+  const aboveLane = {
+    position: { x: 0, y: 0 },
+    size: { width: CANVAS_WIDTH, height: LANE_Y - LANE_HEIGHT / 2 },
+  };
+  const belowLane = {
+    position: { x: 0, y: LANE_Y + LANE_HEIGHT / 2 },
+    size: { width: CANVAS_WIDTH, height: CANVAS_HEIGHT - (LANE_Y + LANE_HEIGHT / 2) },
+  };
+  const lane = {
+    position: { x: 0, y: LANE_Y - LANE_HEIGHT / 2 },
+    size: { width: CANVAS_WIDTH, height: LANE_HEIGHT },
+  };
 
-    // The path enemies walk down — turrets can't be built here
-    {
-      type: "RECTANGLE",
-      color: "#222831",
-      position: { x: 0, y: LANE_Y - LANE_HEIGHT / 2 },
-      size: { width: CANVAS_WIDTH, height: LANE_HEIGHT },
-    },
+  const renderables: Renderable[] = [
+    // Terrain background (grass) and path (dirt), tiled from terrain.png
+    ...tileGrid(aboveLane, TERRAIN_BACKGROUND_FRAME),
+    ...tileGrid(belowLane, TERRAIN_BACKGROUND_FRAME),
+    ...tileGrid(lane, TERRAIN_PATH_FRAME),
+
+    // Invisible click targets over the buildable ground, above and below
+    // the path — clicking either builds a turret at that spot
+    { type: "RECTANGLE", color: "rgba(0,0,0,0)", isClickable: true, id: "build-area", ...aboveLane },
+    { type: "RECTANGLE", color: "rgba(0,0,0,0)", isClickable: true, id: "build-area", ...belowLane },
 
     // Turrets: each focuses one enemy at a time within TOWER_RANGE
     ...state.turrets.map(
@@ -147,15 +183,39 @@ const render: RenderFunction = (state) => {
       position: { x: 20, y: CANVAS_HEIGHT - 30 },
     },
 
-    // Enemy color reflects current hp — see colorForHp
-    ...state.enemies.map(
-      (enemy): Renderable => ({
-        type: "CIRCLE",
-        color: colorForHp(enemy.hp),
-        position: { x: enemy.x, y: LANE_Y },
-        radius: ENEMY_RADIUS,
-      })
-    ),
+    // A walking skeleton for each enemy, already facing/walking right to
+    // match their movement. It also fades out as it takes damage,
+    // replacing the old hp-as-color readout.
+    ...state.enemies.map((enemy): Renderable => {
+      const displaySize = SKELETON_FRAME_SIZE * SKELETON_SCALE;
+      const walkFrame = Math.floor(state.elapsed / WALK_FRAME_DURATION) % SKELETON_FRAME_COUNT;
+
+      return {
+        type: "SPRITE",
+        resourceId: "skeleton",
+        frame: walkFrame,
+        scale: SKELETON_SCALE,
+        opacity: Math.max(0.35, enemy.hp / enemy.maxHp),
+        position: { x: enemy.x - displaySize / 2, y: LANE_Y - displaySize / 2 },
+      };
+    }),
+
+    // A one-shot burst where an enemy died, on top of everything else
+    ...state.explosions.map((explosion): Renderable => {
+      const displaySize = EXPLOSION_FRAME_SIZE * EXPLOSION_SCALE;
+      const frame = Math.min(
+        EXPLOSION_FRAME_COUNT - 1,
+        Math.floor(explosion.age / EXPLOSION_FRAME_DURATION)
+      );
+
+      return {
+        type: "SPRITE",
+        resourceId: "explosion",
+        frame,
+        scale: EXPLOSION_SCALE,
+        position: { x: explosion.x - displaySize / 2, y: explosion.y - displaySize / 2 },
+      };
+    }),
   ];
 
   if (state.lives <= 0) {
@@ -265,22 +325,31 @@ const fireTurrets: NextStateFunction<GameState> = ({ state, event }) => {
   }
 };
 
-// Kills add to the score, and pay gold proportional to how tough the
-// enemy was, instead of surviving to the next step
+// Kills add to the score, pay gold proportional to how tough the enemy
+// was, and leave an explosion behind, instead of surviving to the next
+// step
 const resolveKills: NextStateFunction<GameState> = ({ state, event }) => {
   if (event.tag === "TIME") {
     let score = state.score;
     let gold = state.gold;
+    const newExplosions: Explosion[] = [];
 
     const enemies = state.enemies.filter((enemy) => {
       if (enemy.hp > 0) return true;
 
       score += 1;
       gold += enemy.maxHp;
+      newExplosions.push({ x: enemy.x, y: LANE_Y, age: 0 });
       return false;
     });
 
-    return { ...state, enemies, score, gold };
+    return {
+      ...state,
+      enemies,
+      score,
+      gold,
+      explosions: [...state.explosions, ...newExplosions],
+    };
   }
 };
 
@@ -335,6 +404,18 @@ const ageBeams: NextStateFunction<GameState> = ({ state, event }) => {
   }
 };
 
+// Age out explosions so each one only plays through once
+const ageExplosions: NextStateFunction<GameState> = ({ state, event }) => {
+  if (event.tag === "TIME") {
+    return {
+      ...state,
+      explosions: state.explosions
+        .map((explosion) => ({ ...explosion, age: explosion.age + event.delta }))
+        .filter((explosion) => explosion.age < EXPLOSION_DURATION),
+    };
+  }
+};
+
 // Runs the engine — nextState is just the list of mechanics above, run in
 // order for every event
 Yuuna.runEngine<GameState>({
@@ -350,7 +431,26 @@ Yuuna.runEngine<GameState>({
     resolveLeaks,
     spawnEnemies,
     ageBeams,
+    ageExplosions,
   ],
 
   canvas: { width: CANVAS_WIDTH, height: CANVAS_HEIGHT, backgroundColor: "#0d1831" },
+
+  resources: {
+    skeleton: {
+      src: "./resources/skeleton.png",
+      size: { width: SKELETON_FRAME_SIZE * SKELETON_FRAME_COUNT, height: SKELETON_FRAME_SIZE },
+      slices: { horizontal: SKELETON_FRAME_COUNT, vertical: 1 },
+    },
+    explosion: {
+      src: "./resources/explosion.png",
+      size: { width: EXPLOSION_FRAME_SIZE * EXPLOSION_FRAME_COUNT, height: EXPLOSION_FRAME_SIZE },
+      slices: { horizontal: EXPLOSION_FRAME_COUNT, vertical: 1 },
+    },
+    terrain: {
+      src: "./resources/terrain.png",
+      size: { width: TERRAIN_TILE_SIZE * TERRAIN_TILE_COUNT, height: TERRAIN_TILE_SIZE },
+      slices: { horizontal: TERRAIN_TILE_COUNT, vertical: 1 },
+    },
+  },
 });
