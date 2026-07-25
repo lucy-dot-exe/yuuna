@@ -12,10 +12,13 @@ import {
 } from "./types";
 
 let resetCanvas: (() => void) | null = null;
+let latestRunId = 0;
 
 export const runEngine: RunEngineFunction = async <State>(
   props: RunEngineProps<State>
 ) => {
+  const runId = ++latestRunId;
+
   resetCanvas?.();
 
   const canvas = window.document.getElementById("yuuna");
@@ -77,6 +80,13 @@ export const runEngine: RunEngineFunction = async <State>(
         };
       })
   );
+
+  // A newer runEngine() call started while this one was still loading
+  // resources (e.g. a spritesheet) — abandon this run instead of setting
+  // up a second, orphaned render loop alongside the newer one.
+  if (runId !== latestRunId) {
+    return;
+  }
 
   context.imageSmoothingEnabled = false;
 
