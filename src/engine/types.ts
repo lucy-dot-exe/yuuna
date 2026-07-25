@@ -46,6 +46,21 @@ export type SpriteRenderable = {
   frame: number;
   scale?: number;
   opacity?: number;
+  flipX?: boolean;
+
+  id?: string;
+  isClickable?: boolean;
+  isHoverable?: boolean;
+  trackMouseMovement?: boolean;
+};
+
+export type LineRenderable = {
+  type: "LINE";
+
+  from: { x: number; y: number };
+  to: { x: number; y: number };
+  color: string;
+  width?: number;
 
   id?: string;
   isClickable?: boolean;
@@ -57,7 +72,8 @@ export type Renderable =
   | RectangleRenderable
   | CircleRenderable
   | SpriteRenderable
-  | TextRenderable;
+  | TextRenderable
+  | LineRenderable;
 
 export type TimeEvent = { tag: "TIME"; delta: number };
 
@@ -92,7 +108,7 @@ export type GameEvent =
   | HoverOutEvent
   | MouseMoveEvent;
 
-type NextStateProps<State> = {
+export type NextStateProps<State> = {
   state: State;
   event: GameEvent;
   keyboard: Record<
@@ -105,13 +121,34 @@ type NextStateProps<State> = {
   >;
 };
 
+// Return this from a NextStateFunction to stop the rest of a nextState
+// list from running for this event, instead of every mechanic after it
+// needing to repeat the same guard (only meaningful when nextState is an
+// array — see RunEngineProps.nextState below).
+export const STOP = "Yuuna.STOP" as const;
+
+// A NextStateFunction can return three things instead of just a new state:
+//  - a new State to update to
+//  - undefined (or no return at all) to make no change, but let the rest
+//    of the list keep running — lets a mechanic guard itself with a plain
+//    `if (...) return;` instead of `if (...) return state;`
+//  - STOP to make no change AND stop the rest of the list from running
+//    for this event
+export type NextStateFunction<State> = (
+  props: NextStateProps<State>
+) => State | typeof STOP | undefined;
+
 export type RunEngineProps<State> = {
   initialState: State;
   render: (state: State) => {
     cursor?: "default" | "pointer";
     renderables: Renderable[];
   };
-  nextState: (props: NextStateProps<State>) => State;
+  // A single function, or a list of (state) => state mechanics run in
+  // order for each event — the output of one feeds into the next, so you
+  // can break a game down into small, independent functions instead of
+  // one large nextState.
+  nextState: NextStateFunction<State> | NextStateFunction<State>[];
   resources?: Record<
     string,
     {
@@ -204,4 +241,5 @@ export type KeyboardState = Record<KeyboardKeys, boolean>;
 
 export declare var Yuuna: {
   runEngine: RunEngineFunction;
+  STOP: typeof STOP;
 };

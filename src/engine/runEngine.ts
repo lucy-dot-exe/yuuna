@@ -8,6 +8,7 @@ import {
   Renderable,
   RunEngineFunction,
   RunEngineProps,
+  STOP,
   keyboardKeys,
 } from "./types";
 
@@ -93,6 +94,7 @@ export const runEngine: RunEngineFunction = async <State>(
   function getFocusedElement(position: Position, r: Renderable): boolean {
     const isNonInteractable =
       r.type === "TEXT" ||
+      r.type === "LINE" ||
       ((r.isHoverable === undefined || !r.isHoverable) &&
         (r.isClickable === undefined || !r.isClickable));
 
@@ -161,6 +163,8 @@ export const runEngine: RunEngineFunction = async <State>(
   const updateState = (updateFn: (state: State) => State) => {
     state = updateFn(state);
   };
+
+  const nextStateFns = Array.isArray(props.nextState) ? props.nextState : [props.nextState];
 
   let lastFrame: number = Date.now();
   let hoveredId: string | null = null;
@@ -263,24 +267,34 @@ export const runEngine: RunEngineFunction = async <State>(
     events.push({ tag: "TIME", delta: delta });
 
     for (const event of events) {
-      updateState((state) =>
-        props.nextState({
-          state,
-          event,
-          keyboard: iterateRecord(
-            previousState.keyboardState,
-            ({ key, value: previouslyPressed }) => {
-              const isPressed = currentState.keyboardState[key];
+      const keyboard = iterateRecord(
+        previousState.keyboardState,
+        ({ key, value: previouslyPressed }) => {
+          const isPressed = currentState.keyboardState[key];
 
-              return {
-                isPressed,
-                isJustPressed: isPressed && !previouslyPressed,
-                isJustReleased: !isPressed && previouslyPressed,
-              };
-            }
-          ),
-        })
+          return {
+            isPressed,
+            isJustPressed: isPressed && !previouslyPressed,
+            isJustReleased: !isPressed && previouslyPressed,
+          };
+        }
       );
+
+      for (const nextState of nextStateFns) {
+        const result = nextState({ state, event, keyboard });
+
+        // STOP stops the rest of the list from running for this event,
+        // instead of every later mechanic needing to repeat the same
+        // guard. undefined just means this mechanic made no change, so
+        // the rest of the list still runs.
+        if (result === STOP) {
+          break;
+        }
+
+        if (result !== undefined) {
+          updateState(() => result);
+        }
+      }
     }
 
     events.splice(0, events.length);
@@ -339,7 +353,7 @@ export const runEngine: RunEngineFunction = async <State>(
       }
 
       if (renderable.type === "SPRITE") {
-        const { scale = 1, opacity = 1 } = renderable;
+        const { scale = 1, opacity = 1, flipX = false } = renderable;
         const resource = resourceById[renderable.resourceId];
 
         const frame = {
@@ -349,21 +363,56 @@ export const runEngine: RunEngineFunction = async <State>(
             resource.slices.vertical,
         };
 
+        const destWidth = resource.size.width * scale;
+        const destHeight = resource.size.height * scale;
+
         context.globalAlpha = opacity;
 
-        context.drawImage(
-          resource.image,
-          frame.x * resource.size.width,
-          frame.y * resource.size.height,
-          resource.size.width,
-          resource.size.height,
-          renderable.position.x,
-          renderable.position.y,
-          resource.size.width * scale,
-          resource.size.height * scale
-        );
+        if (flipX) {
+          context.save();
+          context.translate(renderable.position.x + destWidth, renderable.position.y);
+          context.scale(-1, 1);
+
+          context.drawImage(
+            resource.image,
+            frame.x * resource.size.width,
+            frame.y * resource.size.height,
+            resource.size.width,
+            resource.size.height,
+            0,
+            0,
+            destWidth,
+            destHeight
+          );
+
+          context.restore();
+        } else {
+          context.drawImage(
+            resource.image,
+            frame.x * resource.size.width,
+            frame.y * resource.size.height,
+            resource.size.width,
+            resource.size.height,
+            renderable.position.x,
+            renderable.position.y,
+            destWidth,
+            destHeight
+          );
+        }
 
         context.globalAlpha = 1;
+
+        continue;
+      }
+
+      if (renderable.type === "LINE") {
+        context.strokeStyle = renderable.color;
+        context.lineWidth = renderable.width ?? 2;
+
+        context.beginPath();
+        context.moveTo(renderable.from.x, renderable.from.y);
+        context.lineTo(renderable.to.x, renderable.to.y);
+        context.stroke();
 
         continue;
       }
