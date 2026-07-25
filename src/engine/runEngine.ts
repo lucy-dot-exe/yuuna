@@ -46,6 +46,10 @@ export const runEngine: RunEngineFunction = async <State>(
     canvas.style.backgroundColor = props.canvas.backgroundColor;
   }
 
+  // Make the canvas focusable so keyboard input is scoped to it instead of
+  // leaking to the rest of the page (e.g. arrow keys scrolling the window).
+  canvas.tabIndex = 0;
+
   let state: State = props.initialState;
 
   const resources = props.resources ?? {};
@@ -167,18 +171,23 @@ export const runEngine: RunEngineFunction = async <State>(
     keyboardState: { ...initialState.keyboardState },
   };
 
-  document.addEventListener("keydown", (event) => {
+  canvas.addEventListener("keydown", (event) => {
     const pressedKey = keyboardKeys.find((key) => key === event.code);
 
     if (pressedKey !== undefined) {
+      // Stop tracked keys (arrows, space, ...) from also scrolling the
+      // page or triggering other browser defaults while the canvas is
+      // focused.
+      event.preventDefault();
       currentState.keyboardState[pressedKey] = true;
     }
   });
 
-  document.addEventListener("keyup", (event) => {
+  canvas.addEventListener("keyup", (event) => {
     const releasedKey = keyboardKeys.find((key) => key === event.code);
 
     if (releasedKey !== undefined) {
+      event.preventDefault();
       currentState.keyboardState[releasedKey] = false;
     }
   });
