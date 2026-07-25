@@ -1,6 +1,6 @@
 {
   "name": "yuuna-engine",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A lightweight, state-machine-based TypeScript game engine for quick prototypes. Runs directly in the browser.",
   "type": "module",
   "main": "./lib/index.cjs",
