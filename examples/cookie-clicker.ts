@@ -57,11 +57,17 @@ const render: RenderFunction = (state) => {
 type NextStateFunction = (props: {
   state: GameState;
   event: GameEvent;
+  // Lets this function play a sound effect as a side effect, by the id
+  // it's registered under in the `sounds` map passed to runEngine below
+  playSound: (id: string) => void;
 }) => GameState;
 
 const nextState: NextStateFunction = (props) => {
   // If the event is a "cookie is clicked" event
   if (props.event.tag === "CLICK" && props.event.id === "cookie") {
+    // Plays the "collect" sound effect
+    props.playSound("collect");
+
     return {
       // Sums 1 in the cookies counter
       cookies: props.state.cookies + 1,
@@ -79,4 +85,10 @@ Yuuna.runEngine<GameState>({
   render,
 
   canvas: { width: 960, height: 540, backgroundColor: "#0d1831" },
+
+  // Loads the cookie collect sound effect, referenced by id ("collect")
+  // via playSound() in nextState above
+  sounds: {
+    collect: { src: "./resources/collect.wav" },
+  },
 });

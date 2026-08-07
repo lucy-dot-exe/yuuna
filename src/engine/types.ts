@@ -119,6 +119,12 @@ export type NextStateProps<State> = {
       isJustReleased: boolean;
     }
   >;
+  // Plays a sound effect (by its id in RunEngineProps.sounds) as a
+  // side effect of this call — call it from within a NextStateFunction,
+  // e.g. `playSound("collect")` when a cookie is clicked. Playing the
+  // same id again while it's still playing starts an overlapping copy
+  // instead of cutting the first one off.
+  playSound: (id: string) => void;
 };
 
 // Return this from a NextStateFunction to stop the rest of a nextState
@@ -157,6 +163,9 @@ export type RunEngineProps<State> = {
       slices: { vertical: number; horizontal: number };
     }
   >;
+  // Sound effects, keyed by an id you pick — play one from a
+  // NextStateFunction with the `playSound(id)` prop it receives.
+  sounds?: Record<string, { src: string }>;
   canvas?: {
     width?: number;
     height?: number;

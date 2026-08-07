@@ -86,6 +86,11 @@ runEngine<GameState>({
   `SPRITE` renderable's `resourceId` and `frame`. Set `flipX: true` to
   mirror a sprite horizontally — useful when the art is drawn facing one
   direction but needs to move the other way.
+- **Sound effects** — pass a `sounds` map of `{ src }` to `runEngine`, then
+  call the `playSound(id)` function `nextState` receives to play one, e.g.
+  `playSound("collect")` when a cookie is clicked. Calling it again while
+  a sound is still playing overlaps a new copy instead of cutting the
+  first one off.
 - **Canvas** — pass `canvas: { width, height, backgroundColor }` to
   `runEngine` to size and color the canvas from code. All three are
   optional; anything you don't set falls back to the canvas element's

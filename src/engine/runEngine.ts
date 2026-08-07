@@ -82,6 +82,33 @@ export const runEngine: RunEngineFunction = async <State>(
       })
   );
 
+  const sounds = props.sounds ?? {};
+  const audioById = await iterateRecordAsync(
+    sounds,
+    async ({ value }) =>
+      new Promise<HTMLAudioElement>((resolve) => {
+        const audio = new Audio(value.src);
+
+        audio.oncanplaythrough = function () {
+          resolve(audio);
+        };
+      })
+  );
+
+  // Cloning the loaded element per play (instead of reusing it directly)
+  // lets the same sound overlap itself — e.g. rapid clicks each get their
+  // own playback instead of restarting/cutting off the previous one.
+  const playSound = (id: string) => {
+    const audio = audioById[id];
+
+    if (audio === undefined) {
+      return;
+    }
+
+    const instance = audio.cloneNode() as HTMLAudioElement;
+    instance.play();
+  };
+
   // A newer runEngine() call started while this one was still loading
   // resources (e.g. a spritesheet) — abandon this run instead of setting
   // up a second, orphaned render loop alongside the newer one.
@@ -281,7 +308,7 @@ export const runEngine: RunEngineFunction = async <State>(
       );
 
       for (const nextState of nextStateFns) {
-        const result = nextState({ state, event, keyboard });
+        const result = nextState({ state, event, keyboard, playSound });
 
         // STOP stops the rest of the list from running for this event,
         // instead of every later mechanic needing to repeat the same
