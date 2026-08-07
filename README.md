@@ -4,6 +4,8 @@
 
 # Yuuna
 
+[Live demo & playground](https://lucy-dot-exe.github.io/yuuna/) · [GitHub](https://github.com/lucy-dot-exe/yuuna)
+
 A lightweight, state-machine-based TypeScript game engine built for quick
 prototypes — drop it into a page and it's running, no editor or build step
 required. You describe your game as a `state`, a `render(state)` function,
