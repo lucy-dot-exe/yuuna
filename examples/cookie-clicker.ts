@@ -54,15 +54,9 @@ const render: RenderFunction = (state) => {
 
 // Create a function that handles the game state
 // Ask youself: "given the current game state, if an event happens, what should the next state be?"
-type NextStateFunction = (props: {
-  state: GameState;
-  event: GameEvent;
-  // Lets this function play a sound effect as a side effect, by the id
-  // it's registered under in the `sounds` map passed to runEngine below
-  playSound: (id: string) => void;
-}) => GameState;
-
-const nextState: NextStateFunction = (props) => {
+// NextStateFunction<State> comes from the engine — its props also include
+// `keyboard` and `playSound`/`playMusic`/`pauseMusic`, unused here
+const nextState: NextStateFunction<GameState> = (props) => {
   // If the event is a "cookie is clicked" event
   if (props.event.tag === "CLICK" && props.event.id === "cookie") {
     // Plays the "collect" sound effect

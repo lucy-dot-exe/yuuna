@@ -91,6 +91,12 @@ runEngine<GameState>({
   `playSound("collect")` when a cookie is clicked. Calling it again while
   a sound is still playing overlaps a new copy instead of cutting the
   first one off.
+- **Music** — pass a `music` map of `{ src }` to `runEngine`, then use the
+  `playMusic(id)` / `pauseMusic()` functions `nextState` receives to
+  control a looping background track. Unlike `playSound`, only one track
+  plays at a time and it keeps running in the background across frames
+  instead of firing once; `pauseMusic()` leaves it where it stopped, so
+  calling `playMusic(id)` again resumes it instead of starting over.
 - **Canvas** — pass `canvas: { width, height, backgroundColor }` to
   `runEngine` to size and color the canvas from code. All three are
   optional; anything you don't set falls back to the canvas element's

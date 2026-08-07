@@ -15,6 +15,11 @@ import {
 let resetCanvas: (() => void) | null = null;
 let latestRunId = 0;
 
+// Shared between drawing TEXT renderables and hit-testing them for
+// clicks/hovers, so the clickable area always matches what's on screen.
+const TEXT_FONT = "30px Arial";
+const TEXT_LINE_HEIGHT = 30;
+
 export const runEngine: RunEngineFunction = async <State>(
   props: RunEngineProps<State>
 ) => {
@@ -82,18 +87,17 @@ export const runEngine: RunEngineFunction = async <State>(
       })
   );
 
-  const sounds = props.sounds ?? {};
-  const audioById = await iterateRecordAsync(
-    sounds,
-    async ({ value }) =>
-      new Promise<HTMLAudioElement>((resolve) => {
-        const audio = new Audio(value.src);
+  const loadAudio = (src: string) =>
+    new Promise<HTMLAudioElement>((resolve) => {
+      const audio = new Audio(src);
 
-        audio.oncanplaythrough = function () {
-          resolve(audio);
-        };
-      })
-  );
+      audio.oncanplaythrough = function () {
+        resolve(audio);
+      };
+    });
+
+  const sounds = props.sounds ?? {};
+  const audioById = await iterateRecordAsync(sounds, ({ value }) => loadAudio(value.src));
 
   // Cloning the loaded element per play (instead of reusing it directly)
   // lets the same sound overlap itself — e.g. rapid clicks each get their
@@ -109,6 +113,35 @@ export const runEngine: RunEngineFunction = async <State>(
     instance.play();
   };
 
+  const music = props.music ?? {};
+  const musicById = await iterateRecordAsync(music, ({ value }) => loadAudio(value.src));
+
+  // Unlike sounds, music reuses the same element instead of cloning it —
+  // there's only ever one track playing, and reusing it is what lets
+  // pauseMusic()/playMusic() resume from where playback left off instead
+  // of starting over.
+  let currentMusic: HTMLAudioElement | null = null;
+
+  const playMusic = (id: string) => {
+    const audio = musicById[id];
+
+    if (audio === undefined) {
+      return;
+    }
+
+    if (currentMusic !== null && currentMusic !== audio) {
+      currentMusic.pause();
+    }
+
+    audio.loop = true;
+    audio.play();
+    currentMusic = audio;
+  };
+
+  const pauseMusic = () => {
+    currentMusic?.pause();
+  };
+
   // A newer runEngine() call started while this one was still loading
   // resources (e.g. a spritesheet) — abandon this run instead of setting
   // up a second, orphaned render loop alongside the newer one.
@@ -118,9 +151,8 @@ export const runEngine: RunEngineFunction = async <State>(
 
   context.imageSmoothingEnabled = false;
 
-  function getFocusedElement(position: Position, r: Renderable): boolean {
+  const getFocusedElement = (position: Position, r: Renderable): boolean => {
     const isNonInteractable =
-      r.type === "TEXT" ||
       r.type === "LINE" ||
       ((r.isHoverable === undefined || !r.isHoverable) &&
         (r.isClickable === undefined || !r.isClickable));
@@ -172,8 +204,31 @@ export const runEngine: RunEngineFunction = async <State>(
       return isHovered;
     }
 
+    if (r.type === "TEXT") {
+      // Text has no explicit size, so its clickable area is derived from
+      // measuring it the same way it's drawn (see the TEXT branch in the
+      // render loop below) — anchored the same way its `align` positions
+      // it relative to `position`.
+      context.font = TEXT_FONT;
+      const width = context.measureText(r.text).width;
+      const height = TEXT_LINE_HEIGHT;
+
+      const alignX = r.align?.x ?? "left";
+      const left =
+        alignX === "center" ? r.position.x - width / 2 : alignX === "right" ? r.position.x - width : r.position.x;
+
+      const alignY = r.align?.y ?? "top";
+      const top =
+        alignY === "middle" ? r.position.y - height / 2 : alignY === "bottom" ? r.position.y - height : r.position.y;
+
+      const isInsideX = position.x > left && position.x < left + width;
+      const isInsideY = position.y > top && position.y < top + height;
+
+      return isInsideX && isInsideY;
+    }
+
     exhaust(r);
-  }
+  };
 
   // ev.offsetX/offsetY are in CSS-rendered pixels, which differ from the
   // canvas's drawing-buffer resolution whenever it's displayed at a
@@ -308,7 +363,7 @@ export const runEngine: RunEngineFunction = async <State>(
       );
 
       for (const nextState of nextStateFns) {
-        const result = nextState({ state, event, keyboard, playSound });
+        const result = nextState({ state, event, keyboard, playSound, playMusic, pauseMusic });
 
         // STOP stops the rest of the list from running for this event,
         // instead of every later mechanic needing to repeat the same
@@ -371,7 +426,7 @@ export const runEngine: RunEngineFunction = async <State>(
         } = renderable;
         context.fillStyle = color;
 
-        context.font = "30px Arial";
+        context.font = TEXT_FONT;
         context.textAlign = align?.x ?? "left";
         context.textBaseline = align?.y ?? "top";
         context.fillText(text, x, y);

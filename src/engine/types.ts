@@ -125,6 +125,16 @@ export type NextStateProps<State> = {
   // same id again while it's still playing starts an overlapping copy
   // instead of cutting the first one off.
   playSound: (id: string) => void;
+  // Starts background music (by its id in RunEngineProps.music), looping
+  // it until paused. Unlike playSound, only one track plays at a time and
+  // it keeps running in the background across frames/state changes
+  // instead of firing once — calling playMusic again with the same id
+  // after pauseMusic() resumes it from where it left off; calling it with
+  // a different id switches tracks.
+  playMusic: (id: string) => void;
+  // Pauses whichever track playMusic last started, leaving its position
+  // where it left off so a later playMusic() call resumes it.
+  pauseMusic: () => void;
 };
 
 // Return this from a NextStateFunction to stop the rest of a nextState
@@ -166,6 +176,10 @@ export type RunEngineProps<State> = {
   // Sound effects, keyed by an id you pick — play one from a
   // NextStateFunction with the `playSound(id)` prop it receives.
   sounds?: Record<string, { src: string }>;
+  // Background music tracks, keyed by an id you pick — start/pause one
+  // from a NextStateFunction with the `playMusic(id)` / `pauseMusic()`
+  // props it receives.
+  music?: Record<string, { src: string }>;
   canvas?: {
     width?: number;
     height?: number;

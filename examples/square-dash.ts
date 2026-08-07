@@ -29,16 +29,9 @@ const render: RenderFunction = (state) => {
 
 // Create a function that handles the game state
 // Ask yourself: "given the current game state, if an event happens, what should the next state be?"
-type NextStateFunction = (props: {
-  state: GameState;
-  event: GameEvent;
-  keyboard: Record<
-    KeyboardKeys,
-    { isPressed: boolean; isJustPressed: boolean; isJustReleased: boolean }
-  >;
-}) => GameState;
-
-const nextState: NextStateFunction = ({ state, event, keyboard }) => {
+// NextStateFunction<State> comes from the engine — its props also include
+// `playSound`/`playMusic`/`pauseMusic`, unused here
+const nextState: NextStateFunction<GameState> = ({ state, event, keyboard }) => {
   // Only move on frame ticks, using the elapsed time so speed stays the
   // same regardless of frame rate
   if (event.tag !== "TIME") {
