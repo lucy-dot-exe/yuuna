@@ -31,6 +31,9 @@ const sortByLayer = (renderables: Renderable[]): Renderable[] =>
 const anchorOf = (renderable: Renderable): Position =>
   renderable.type === "LINE" ? renderable.from : renderable.position;
 
+// No RunEngineProps.camera set is the same as one that doesn't pan or zoom.
+const DEFAULT_CAMERA = { x: 0, y: 0, zoom: 1 };
+
 export const runEngine: RunEngineFunction = async <State>(
   props: RunEngineProps<State>
 ) => {
@@ -280,12 +283,17 @@ export const runEngine: RunEngineFunction = async <State>(
     return [effective, ...children];
   };
 
-  const flattenRenderables = (renderables: Renderable[]): Renderable[] =>
-    renderables.flatMap((renderable) => flattenRenderable(renderable, IDENTITY_TRANSFORM));
+  // parent defaults to the identity transform (used for screen-space
+  // renderables, and by everything before the camera existed) — callers
+  // that need a different root, like renderState's camera below, pass
+  // their own.
+  const flattenRenderables = (renderables: Renderable[], parent: Transform = IDENTITY_TRANSFORM): Renderable[] =>
+    renderables.flatMap((renderable) => flattenRenderable(renderable, parent));
 
   const getFocusedElement = (position: Position, r: Renderable): boolean => {
     const isNonInteractable =
       r.type === "LINE" ||
+      r.type === "GROUP" ||
       ((r.isHoverable === undefined || !r.isHoverable) &&
         (r.isClickable === undefined || !r.isClickable));
 
@@ -376,14 +384,45 @@ export const runEngine: RunEngineFunction = async <State>(
     exhaust(r);
   };
 
+  // The camera is just another ancestor transform, exactly like a
+  // renderable's own parent — { x, y } is the world position mapped to
+  // canvas (0, 0), so it's the anchor transformPoint already expects:
+  // screen = (world - camera.position) * zoom.
+  const cameraTransformOf = (camera: { x: number; y: number; zoom: number }): Transform => ({
+    anchor: { x: -camera.x * camera.zoom, y: -camera.y * camera.zoom },
+    scale: { x: camera.zoom, y: camera.zoom },
+    modulate: undefined,
+    layer: 0,
+  });
+
+  // The inverse of cameraTransformOf, for turning a raw canvas position
+  // (mouse) into a world position (worldMouse) — see ClickEvent etc.
+  const toWorldPosition = (position: Position, camera: { x: number; y: number; zoom: number }): Position => ({
+    x: camera.x + position.x / camera.zoom,
+    y: camera.y + position.y / camera.zoom,
+  });
+
   // Every call site needs renderables flattened and in draw order — the
   // mousemove/click handlers below to find whichever's topmost under the
   // mouse, the draw loop to actually draw them that way — so both are
   // applied once here instead of separately wherever props.render() gets
-  // called.
+  // called. Screen-space renderables skip the camera entirely (flattened
+  // from the identity transform, same as before there was a camera);
+  // everything else is flattened as if the camera were its shared parent.
   const renderState = (state: State) => {
     const result = props.render(state);
-    return { cursor: result.cursor, renderables: sortByLayer(flattenRenderables(result.renderables)) };
+    const camera = props.camera?.(state) ?? DEFAULT_CAMERA;
+    const cameraTransform = cameraTransformOf(camera);
+
+    const worldRenderables = result.renderables.filter((r) => !r.screenSpace);
+    const screenRenderables = result.renderables.filter((r) => r.screenSpace);
+
+    const renderables = sortByLayer([
+      ...flattenRenderables(worldRenderables, cameraTransform),
+      ...flattenRenderables(screenRenderables),
+    ]);
+
+    return { cursor: result.cursor, renderables, camera };
   };
 
   // ev.offsetX/offsetY are in CSS-rendered pixels, which differ from the
@@ -414,12 +453,12 @@ export const runEngine: RunEngineFunction = async <State>(
 
     if (hoveredId === null) return;
 
-    const { renderables } = renderState(state);
+    const { renderables, camera } = renderState(state);
 
     const hovered = renderables.find((e) => e.id === hoveredId);
 
     if (hovered !== undefined && hovered.isClickable) {
-      events.push({ tag: "CLICK", id: hovered.id, mouse });
+      events.push({ tag: "CLICK", id: hovered.id, mouse, worldMouse: toWorldPosition(mouse, camera) });
     }
   });
 
@@ -459,21 +498,22 @@ export const runEngine: RunEngineFunction = async <State>(
   canvas.addEventListener("mousemove", (ev) => {
     const mouse = getCanvasPosition(ev);
 
-    const { renderables } = renderState(state);
+    const { renderables, camera } = renderState(state);
+    const worldMouse = toWorldPosition(mouse, camera);
 
     const hovered = [...renderables]
       .reverse()
       .find((r) => getFocusedElement(mouse, r));
 
     if (hovered !== undefined && hovered.isHoverable) {
-      events.push({ tag: "HOVER_IN", id: hovered.id, mouse });
+      events.push({ tag: "HOVER_IN", id: hovered.id, mouse, worldMouse });
     }
 
     if (hoveredId !== null) {
       const lastHovered = renderables.find((r) => r.id === hoveredId);
 
       if (lastHovered !== undefined && lastHovered.id !== hovered?.id) {
-        events.push({ tag: "HOVER_OUT", id: lastHovered.id, mouse });
+        events.push({ tag: "HOVER_OUT", id: lastHovered.id, mouse, worldMouse });
       }
     }
 
@@ -487,12 +527,12 @@ export const runEngine: RunEngineFunction = async <State>(
       return;
     }
 
-    const { renderables } = renderState(state);
+    const { renderables, camera } = renderState(state);
 
     const hovered = renderables.find((r) => r.id === hoveredId);
 
     if (hovered !== undefined && hovered.trackMouseMovement) {
-      events.push({ tag: "MOUSE_MOVE", mouse, id: hovered.id });
+      events.push({ tag: "MOUSE_MOVE", mouse, worldMouse: toWorldPosition(mouse, camera), id: hovered.id });
     }
   });
 
@@ -516,27 +556,69 @@ export const runEngine: RunEngineFunction = async <State>(
     context.translate(-anchor.x, -anchor.y);
   };
 
-  // Tints a just-drawn SPRITE by `modulate`: multiply-blending a filled
-  // rectangle over it would also color the fully-transparent parts of its
-  // bounding box, so this clips that tint back down to the sprite's own
-  // shape afterward by redrawing it (via `redraw`) with `destination-in`,
-  // which keeps only where the two overlap.
-  const tintSprite = (
-    redraw: () => void,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
+  // Reused across every tinted SPRITE draw this run, instead of allocating
+  // a fresh offscreen canvas per sprite per frame — see tintedSpriteFrame.
+  const tintBuffer = window.document.createElement("canvas");
+  const tintBufferContext = tintBuffer.getContext("2d");
+
+  // Renders one frame of a spritesheet, tinted by `modulate`, onto the
+  // shared offscreen buffer and returns it ready to draw — multiply-
+  // blending a filled rectangle over the frame would also color its
+  // fully-transparent pixels, so this clips that back down to the
+  // frame's own shape afterward with `destination-in`.
+  //
+  // This has to happen on an *isolated* buffer rather than directly on
+  // the main canvas: destination-in isn't scoped to this draw call's own
+  // area, it's a whole-buffer operation that erases anything the new
+  // draw doesn't cover. Doing it on the main canvas would erase whatever
+  // was already drawn underneath the sprite's transparent pixels (e.g.
+  // terrain showing through the gaps in a character) instead of leaving
+  // it alone. The buffer starts out empty, so there's nothing under it
+  // to lose — only the finished, correctly-masked result ever reaches
+  // the main canvas, via a normal (source-over) drawImage.
+  const tintedSpriteFrame = (
+    image: HTMLImageElement,
+    source: { x: number; y: number; width: number; height: number },
     modulate: string
-  ) => {
-    context.globalCompositeOperation = "multiply";
-    context.fillStyle = modulate;
-    context.fillRect(x, y, width, height);
+  ): CanvasImageSource => {
+    if (tintBufferContext === null) {
+      return image;
+    }
 
-    context.globalCompositeOperation = "destination-in";
-    redraw();
+    tintBuffer.width = source.width;
+    tintBuffer.height = source.height;
 
-    context.globalCompositeOperation = "source-over";
+    tintBufferContext.drawImage(
+      image,
+      source.x,
+      source.y,
+      source.width,
+      source.height,
+      0,
+      0,
+      source.width,
+      source.height
+    );
+
+    tintBufferContext.globalCompositeOperation = "multiply";
+    tintBufferContext.fillStyle = modulate;
+    tintBufferContext.fillRect(0, 0, source.width, source.height);
+
+    tintBufferContext.globalCompositeOperation = "destination-in";
+    tintBufferContext.drawImage(
+      image,
+      source.x,
+      source.y,
+      source.width,
+      source.height,
+      0,
+      0,
+      source.width,
+      source.height
+    );
+    tintBufferContext.globalCompositeOperation = "source-over";
+
+    return tintBuffer;
   };
 
   const intervalId = setInterval(() => {
@@ -652,18 +734,32 @@ export const runEngine: RunEngineFunction = async <State>(
             resource.slices.vertical,
         };
 
+        const source = {
+          x: frame.x * resource.size.width,
+          y: frame.y * resource.size.height,
+          width: resource.size.width,
+          height: resource.size.height,
+        };
+
         const destWidth = resource.size.width;
         const destHeight = resource.size.height;
+
+        // Tinting swaps in an already-tinted offscreen copy of this frame
+        // as the image to draw — everything past this point (flipX,
+        // positioning) treats it exactly like the untinted spritesheet,
+        // just drawn starting at (0, 0) instead of cropped from a sheet.
+        const image = modulate === undefined ? resource.image : tintedSpriteFrame(resource.image, source, modulate);
+        const imageSource = modulate === undefined ? source : { x: 0, y: 0, width: source.width, height: source.height };
 
         context.globalAlpha = opacity;
 
         const drawSprite = (destX: number, destY: number) => {
           context.drawImage(
-            resource.image,
-            frame.x * resource.size.width,
-            frame.y * resource.size.height,
-            resource.size.width,
-            resource.size.height,
+            image,
+            imageSource.x,
+            imageSource.y,
+            imageSource.width,
+            imageSource.height,
             destX,
             destY,
             destWidth,
@@ -678,24 +774,9 @@ export const runEngine: RunEngineFunction = async <State>(
 
           drawSprite(0, 0);
 
-          if (modulate !== undefined) {
-            tintSprite(() => drawSprite(0, 0), 0, 0, destWidth, destHeight, modulate);
-          }
-
           context.restore();
         } else {
           drawSprite(renderable.position.x, renderable.position.y);
-
-          if (modulate !== undefined) {
-            tintSprite(
-              () => drawSprite(renderable.position.x, renderable.position.y),
-              renderable.position.x,
-              renderable.position.y,
-              destWidth,
-              destHeight,
-              modulate
-            );
-          }
         }
 
         context.globalAlpha = 1;
@@ -714,6 +795,14 @@ export const runEngine: RunEngineFunction = async <State>(
         context.lineTo(renderable.to.x, renderable.to.y);
         context.stroke();
 
+        context.restore();
+        continue;
+      }
+
+      if (renderable.type === "GROUP") {
+        // Draws nothing itself — it only exists to give its children
+        // (already peeled off into their own entries by flattenRenderables)
+        // something to be positioned/scaled/tinted relative to.
         context.restore();
         continue;
       }

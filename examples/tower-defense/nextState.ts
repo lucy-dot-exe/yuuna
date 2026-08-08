@@ -38,8 +38,11 @@ export const buildTurret: NextStateFunction<GameState> = ({ state, event }) => {
       ...state,
       gold: state.gold - TURRET_COST,
       turrets: [
+        // worldMouse, not mouse — the turret's x/y is world-space state
+        // (build-area itself is world-space too, per render.ts, so this
+        // still lands exactly where the click landed even zoomed out)
         ...state.turrets,
-        { id: state.nextTurretId, x: event.mouse.x, y: event.mouse.y, cooldown: 0 },
+        { id: state.nextTurretId, x: event.worldMouse.x, y: event.worldMouse.y, cooldown: 0 },
       ],
       nextTurretId: state.nextTurretId + 1,
     };

@@ -8,6 +8,7 @@
 import {
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
+  CAMERA,
   SKELETON_FRAME_SIZE,
   SKELETON_FRAME_COUNT,
   EXPLOSION_FRAME_SIZE,
@@ -49,6 +50,13 @@ Yuuna.runEngine<GameState>({
   ],
 
   canvas: { width: CANVAS_WIDTH, height: CANVAS_HEIGHT, backgroundColor: "#0d1831" },
+
+  // Zooms out for a wider view of the battlefield — everything without
+  // screenSpace: true (terrain, turrets, enemies, beams, explosions,
+  // build-area click targets) pans/zooms with it; the score/lives/gold/
+  // instructions text in render.ts opts out with screenSpace: true so
+  // it stays fixed and readable regardless of zoom.
+  camera: () => CAMERA,
 
   resources: {
     skeleton: {

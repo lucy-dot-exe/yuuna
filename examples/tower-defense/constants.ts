@@ -7,6 +7,19 @@ export const CANVAS_HEIGHT = 540;
 export const LANE_Y = 270;
 export const LANE_HEIGHT = 40;
 
+// Zoomed out a bit for a wider view of the whole battlefield. camera's
+// { x, y } is the world point mapped to canvas (0, 0) — anchored to the
+// top-left corner, not centered — so zooming out around (0, 0) would pin
+// the top-left corner in place and reveal empty margin only on the
+// right/bottom. Offsetting x/y inward by half of what the zoom-out
+// shrinks away centers the view on the canvas instead.
+export const CAMERA_ZOOM = 0.8;
+export const CAMERA = {
+  zoom: CAMERA_ZOOM,
+  x: (CANVAS_WIDTH / 2) * (1 - 1 / CAMERA_ZOOM),
+  y: (CANVAS_HEIGHT / 2) * (1 - 1 / CAMERA_ZOOM),
+};
+
 export const TOWER_RANGE = 160;
 export const TOWER_COOLDOWN = 700; // milliseconds between shots
 export const TOWER_DAMAGE = 1; // damage dealt per shot
@@ -15,6 +28,18 @@ export const BEAM_DURATION = 120; // milliseconds the firing line stays visible
 
 export const ENEMY_SPEED = 0.05; // pixels per millisecond
 export const ENEMY_HP_TIERS = [1, 2, 4, 8]; // each spawn is randomly one of these
+
+// A single knob for the overall scale of every sprite-backed visual
+// (terrain, enemies, explosions) — layered on top of each asset's own
+// scale below (SKELETON_SCALE, EXPLOSION_SCALE, TERRAIN_SCALE, which
+// compensate for each asset's own native resolution so they read as
+// consistent sizes next to each other), so bumping this one number
+// zooms all the pixel art together instead of touching every per-asset
+// constant individually. It only wraps the pixel art itself (see the
+// GROUP in render.ts) — turret/build-area/UI positions live in a fixed,
+// unscaled coordinate system, so changing this away from 1 will
+// visually detach the art from them.
+export const PIXEL_ART_SCALE = 1;
 
 export const SKELETON_FRAME_SIZE = 16; // native pixels per frame, before scale
 export const SKELETON_FRAME_COUNT = 3;

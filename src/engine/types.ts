@@ -21,6 +21,12 @@ type BaseRenderable = {
   // a deeply-nested child can still end up drawn in front of an
   // unrelated top-level renderable if its accumulated layer says so).
   children?: Renderable[];
+  // If true, this renderable (and its whole subtree) ignores the camera
+  // and stays fixed to the screen — for UI/HUD elements that shouldn't
+  // pan or zoom with the game world. Defaults to false (world-space).
+  // Only matters if RunEngineProps.camera is set; otherwise there's no
+  // camera transform to opt out of.
+  screenSpace?: boolean;
 
   id?: string;
   isClickable?: boolean;
@@ -74,37 +80,58 @@ export type LineRenderable = BaseRenderable & {
   width?: number;
 };
 
+// Draws nothing itself — just a position (plus the usual scale/modulate/
+// layer) for `children` to be relative to, for grouping renderables that
+// should move/scale/tint together without needing a visible shape of its
+// own to hang them off of. Never interactable — it has no shape to hit-test.
+export type GroupRenderable = BaseRenderable & {
+  type: "GROUP";
+
+  position: { x: number; y: number };
+};
+
 export type Renderable =
   | RectangleRenderable
   | CircleRenderable
   | SpriteRenderable
   | TextRenderable
-  | LineRenderable;
+  | LineRenderable
+  | GroupRenderable;
 
 export type TimeEvent = { tag: "TIME"; delta: number };
 
+// mouse is raw canvas pixels, unaffected by the camera — use it for
+// screenSpace/UI renderables. worldMouse is that same position run
+// through the camera's inverse transform, so it's where the cursor is
+// in the game world — use it to place/locate world-space things (e.g.
+// a turret built where the player clicked). With no RunEngineProps.camera
+// set, worldMouse is always equal to mouse.
 export type ClickEvent = {
   tag: "CLICK";
   id?: string;
   mouse: { x: number; y: number };
+  worldMouse: { x: number; y: number };
 };
 
 export type HoverInEvent = {
   tag: "HOVER_IN";
   id?: string;
   mouse: { x: number; y: number };
+  worldMouse: { x: number; y: number };
 };
 
 export type HoverOutEvent = {
   tag: "HOVER_OUT";
   id?: string;
   mouse: { x: number; y: number };
+  worldMouse: { x: number; y: number };
 };
 
 export type MouseMoveEvent = {
   tag: "MOUSE_MOVE";
   id?: string;
   mouse: { x: number; y: number };
+  worldMouse: { x: number; y: number };
 };
 
 export type GameEvent =
@@ -191,6 +218,15 @@ export type RunEngineProps<State> = {
     height?: number;
     backgroundColor?: string;
   };
+  // Pans/zooms every world-space renderable (anything without
+  // screenSpace: true) as a group — { x, y } is the world position that
+  // maps to canvas (0, 0), and zoom scales everything around that same
+  // point (so it's the corner that stays put as zoom changes, the same
+  // anchor convention scale/GROUP already use elsewhere). A function of
+  // state, so the camera can follow something or react to a zoom level
+  // you're tracking yourself. Affects rendering and hit-testing, but not
+  // the raw `mouse` on click/hover events — see worldMouse for that.
+  camera?: (state: State) => { x: number; y: number; zoom: number };
 };
 
 export type RunEngineFunction = <State>(

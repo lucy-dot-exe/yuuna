@@ -72,10 +72,14 @@ runEngine<GameState>({
 ## Concepts
 
 - **Renderables** — declarative shapes drawn each frame: `RECTANGLE`,
-  `CIRCLE`, `TEXT`, `SPRITE`, and `LINE`. Give one an `id` plus
+  `CIRCLE`, `TEXT`, `SPRITE`, `LINE`, and `GROUP`. Give one an `id` plus
   `isClickable` / `isHoverable` / `trackMouseMovement` to make it
-  interactive. `TEXT` also takes a `fontSize` (defaults to `30`). Every
-  renderable also takes:
+  interactive. `TEXT` also takes a `fontSize` (defaults to `30`). `GROUP`
+  draws nothing itself — it's just a `position` (plus the usual
+  `scale`/`modulate`/`layer` below) for `children` to hang off of, for
+  grouping renderables that should move/scale/tint together without
+  needing a shape of its own; it's never interactable, since it has no
+  shape to hit-test. Every renderable also takes:
   - `layer` — higher values render later, i.e. in front of lower ones.
     Defaults to `0`; renderables on the same layer keep `render()`'s order.
   - `scale` — `{ x, y }` multiplier on the renderable's size, anchored at
@@ -93,10 +97,23 @@ runEngine<GameState>({
     deeply-nested child can still end up drawn in front of an unrelated
     top-level renderable if its accumulated layer says so). A child is a
     full `Renderable`, so it can have its own `id` / `isClickable` / even
-    its own `children`.
+    its own `children`. `screenSpace: true` makes a renderable (and its
+    whole subtree) ignore the camera below and stay fixed to the screen —
+    for UI/HUD that shouldn't pan or zoom with the game world.
+- **Camera** — pass `camera: (state) => ({ x, y, zoom })` to `runEngine` to
+  pan/zoom every world-space renderable (anything without
+  `screenSpace: true`) as a group, the same way a `GROUP` parent works for
+  its children — `{ x, y }` is the world position mapped to canvas
+  `(0, 0)`, and `zoom` scales everything around that same point. It's a
+  function of state, so the camera can follow something or react to a
+  zoom level you're tracking yourself.
 - **Events** — your `nextState` function receives one `GameEvent` per call:
   `TIME` (frame tick with `delta`), `CLICK`, `HOVER_IN`, `HOVER_OUT`, or
-  `MOUSE_MOVE`.
+  `MOUSE_MOVE`. The mouse-carrying ones include both `mouse` (raw canvas
+  pixels — use for `screenSpace`/UI logic) and `worldMouse` (that same
+  position run through the camera's inverse transform — use to
+  place/locate world-space things, e.g. build a turret where the player
+  clicked). With no `camera` set, `worldMouse` always equals `mouse`.
 - **Keyboard** — `nextState` also receives a `keyboard` map keyed by
   `KeyCode`-style keys (e.g. `"KeyW"`, `"ArrowLeft"`, `"Space"`), each with
   `isPressed` / `isJustPressed` / `isJustReleased`.
