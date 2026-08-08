@@ -31,6 +31,8 @@ export type TextRenderable = {
   color: string;
   position: { x: number; y: number };
   align?: { x: "left" | "center" | "right"; y: "bottom" | "middle" | "top" };
+  // Defaults to 30 (pixels) if unset
+  fontSize?: number;
 
   id?: string;
   isClickable?: boolean;

@@ -17,8 +17,8 @@ let latestRunId = 0;
 
 // Shared between drawing TEXT renderables and hit-testing them for
 // clicks/hovers, so the clickable area always matches what's on screen.
-const TEXT_FONT = "30px Arial";
-const TEXT_LINE_HEIGHT = 30;
+const DEFAULT_TEXT_FONT_SIZE = 30;
+const textFont = (fontSize: number) => `${fontSize}px Arial`;
 
 export const runEngine: RunEngineFunction = async <State>(
   props: RunEngineProps<State>
@@ -209,9 +209,10 @@ export const runEngine: RunEngineFunction = async <State>(
       // measuring it the same way it's drawn (see the TEXT branch in the
       // render loop below) — anchored the same way its `align` positions
       // it relative to `position`.
-      context.font = TEXT_FONT;
+      const fontSize = r.fontSize ?? DEFAULT_TEXT_FONT_SIZE;
+      context.font = textFont(fontSize);
       const width = context.measureText(r.text).width;
-      const height = TEXT_LINE_HEIGHT;
+      const height = fontSize;
 
       const alignX = r.align?.x ?? "left";
       const left =
@@ -423,10 +424,11 @@ export const runEngine: RunEngineFunction = async <State>(
           position: { x, y },
           text,
           align,
+          fontSize,
         } = renderable;
         context.fillStyle = color;
 
-        context.font = TEXT_FONT;
+        context.font = textFont(fontSize ?? DEFAULT_TEXT_FONT_SIZE);
         context.textAlign = align?.x ?? "left";
         context.textBaseline = align?.y ?? "top";
         context.fillText(text, x, y);

@@ -74,7 +74,7 @@ runEngine<GameState>({
 - **Renderables** — declarative shapes drawn each frame: `RECTANGLE`,
   `CIRCLE`, `TEXT`, `SPRITE`, and `LINE`. Give one an `id` plus
   `isClickable` / `isHoverable` / `trackMouseMovement` to make it
-  interactive.
+  interactive. `TEXT` also takes a `fontSize` (defaults to `30`).
 - **Events** — your `nextState` function receives one `GameEvent` per call:
   `TIME` (frame tick with `delta`), `CLICK`, `HOVER_IN`, `HOVER_OUT`, or
   `MOUSE_MOVE`.
