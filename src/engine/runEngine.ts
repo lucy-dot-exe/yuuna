@@ -162,6 +162,127 @@ export const runEngine: RunEngineFunction = async <State>(
 
   context.imageSmoothingEnabled = false;
 
+  // An offscreen 1x1 canvas used only to resolve a CSS color string (a
+  // name, hex, rgb(), hsl(), ...) into concrete RGBA bytes: paint it that
+  // color and read the pixel back. Lets modulateColor() below multiply
+  // any two colors together without hand-rolling a CSS color parser.
+  const colorSwatchContext = window.document.createElement("canvas").getContext("2d");
+
+  // Color strings are almost always the same literal reused every frame,
+  // and getImageData is one of the slower canvas operations — cached so a
+  // given color only actually gets resolved once.
+  const resolvedColorByString: Record<string, [number, number, number, number]> = {};
+
+  const resolveColor = (color: string): [number, number, number, number] => {
+    const cached = resolvedColorByString[color];
+
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    if (colorSwatchContext === null) {
+      return [255, 255, 255, 255];
+    }
+
+    colorSwatchContext.clearRect(0, 0, 1, 1);
+    colorSwatchContext.fillStyle = color;
+    colorSwatchContext.fillRect(0, 0, 1, 1);
+
+    const [r, g, b, a] = colorSwatchContext.getImageData(0, 0, 1, 1).data;
+    const resolved: [number, number, number, number] = [r, g, b, a];
+
+    resolvedColorByString[color] = resolved;
+    return resolved;
+  };
+
+  // Multiplies two colors channel-by-channel, the same way Godot's
+  // `modulate` works — e.g. modulating "white" by "#808080" halves
+  // brightness, by "#ff0000" keeps only the red channel.
+  const modulateColor = (color: string, modulate: string): string => {
+    const [r1, g1, b1, a1] = resolveColor(color);
+    const [r2, g2, b2, a2] = resolveColor(modulate);
+
+    const mixChannel = (c1: number, c2: number) => (c1 * c2) / 255;
+
+    return `rgba(${mixChannel(r1, r2)}, ${mixChannel(g1, g2)}, ${mixChannel(b1, b2)}, ${mixChannel(a1, a2) / 255})`;
+  };
+
+  // Combines a parent's already-composed modulate with a child's own —
+  // undefined means "no tint from this side", so it just passes the
+  // other one through instead of multiplying against an implicit white.
+  const composeModulate = (parent: string | undefined, own: string | undefined): string | undefined => {
+    if (parent === undefined) return own;
+    if (own === undefined) return parent;
+    return modulateColor(parent, own);
+  };
+
+  // A parent's accumulated position/scale/modulate/layer, passed down
+  // while flattening — see flattenRenderable below.
+  type Transform = {
+    anchor: Position;
+    scale: { x: number; y: number };
+    modulate: string | undefined;
+    layer: number;
+  };
+
+  const IDENTITY_TRANSFORM: Transform = {
+    anchor: { x: 0, y: 0 },
+    scale: { x: 1, y: 1 },
+    modulate: undefined,
+    layer: 0,
+  };
+
+  // A child's own position is authored relative to its parent, in the
+  // parent's local (unscaled) units — the same way Godot composes
+  // Node2D transforms — so it needs both the parent's scale and its
+  // accumulated offset applied to land in absolute canvas coordinates.
+  const transformPoint = (parent: Transform, localPoint: Position): Position => ({
+    x: parent.anchor.x + localPoint.x * parent.scale.x,
+    y: parent.anchor.y + localPoint.y * parent.scale.y,
+  });
+
+  // Turns a render() tree into the flat list the rest of the engine
+  // already knows how to sort/draw/hit-test — each renderable's own
+  // position/from/to/scale/modulate/layer replaced by the *effective*
+  // (absolute, fully composed with its ancestors') values, and its
+  // children peeled off into their own entries in the returned list
+  // instead of staying nested. Nothing past this point needs to know
+  // parent/child relationships existed at all.
+  const flattenRenderable = (renderable: Renderable, parent: Transform): Renderable[] => {
+    const localScale = renderable.scale ?? { x: 1, y: 1 };
+    const scale = { x: parent.scale.x * localScale.x, y: parent.scale.y * localScale.y };
+    const modulate = composeModulate(parent.modulate, renderable.modulate);
+    const layer = parent.layer + (renderable.layer ?? 0);
+
+    const effective: Renderable =
+      renderable.type === "LINE"
+        ? {
+            ...renderable,
+            from: transformPoint(parent, renderable.from),
+            to: transformPoint(parent, renderable.to),
+            scale,
+            modulate,
+            layer,
+            children: undefined,
+          }
+        : {
+            ...renderable,
+            position: transformPoint(parent, renderable.position),
+            scale,
+            modulate,
+            layer,
+            children: undefined,
+          };
+
+    const childTransform: Transform = { anchor: anchorOf(effective), scale, modulate, layer };
+    const children = (renderable.children ?? []).flatMap((child) => flattenRenderable(child, childTransform));
+
+    return [effective, ...children];
+  };
+
+  const flattenRenderables = (renderables: Renderable[]): Renderable[] =>
+    renderables.flatMap((renderable) => flattenRenderable(renderable, IDENTITY_TRANSFORM));
+
   const getFocusedElement = (position: Position, r: Renderable): boolean => {
     const isNonInteractable =
       r.type === "LINE" ||
@@ -255,13 +376,14 @@ export const runEngine: RunEngineFunction = async <State>(
     exhaust(r);
   };
 
-  // Every call site needs renderables in draw order — the mousemove/click
-  // handlers below to find whichever's topmost under the mouse, the draw
-  // loop to actually draw them that way — so layer is applied once here
-  // instead of separately wherever props.render() gets called.
+  // Every call site needs renderables flattened and in draw order — the
+  // mousemove/click handlers below to find whichever's topmost under the
+  // mouse, the draw loop to actually draw them that way — so both are
+  // applied once here instead of separately wherever props.render() gets
+  // called.
   const renderState = (state: State) => {
     const result = props.render(state);
-    return { cursor: result.cursor, renderables: sortByLayer(result.renderables) };
+    return { cursor: result.cursor, renderables: sortByLayer(flattenRenderables(result.renderables)) };
   };
 
   // ev.offsetX/offsetY are in CSS-rendered pixels, which differ from the
@@ -375,51 +497,6 @@ export const runEngine: RunEngineFunction = async <State>(
   });
 
   context.imageSmoothingEnabled = false;
-
-  // An offscreen 1x1 canvas used only to resolve a CSS color string (a
-  // name, hex, rgb(), hsl(), ...) into concrete RGBA bytes: paint it that
-  // color and read the pixel back. Lets modulateColor() below multiply
-  // any two colors together without hand-rolling a CSS color parser.
-  const colorSwatchContext = window.document.createElement("canvas").getContext("2d");
-
-  // Color strings are almost always the same literal reused every frame,
-  // and getImageData is one of the slower canvas operations — cached so a
-  // given color only actually gets resolved once.
-  const resolvedColorByString: Record<string, [number, number, number, number]> = {};
-
-  const resolveColor = (color: string): [number, number, number, number] => {
-    const cached = resolvedColorByString[color];
-
-    if (cached !== undefined) {
-      return cached;
-    }
-
-    if (colorSwatchContext === null) {
-      return [255, 255, 255, 255];
-    }
-
-    colorSwatchContext.clearRect(0, 0, 1, 1);
-    colorSwatchContext.fillStyle = color;
-    colorSwatchContext.fillRect(0, 0, 1, 1);
-
-    const [r, g, b, a] = colorSwatchContext.getImageData(0, 0, 1, 1).data;
-    const resolved: [number, number, number, number] = [r, g, b, a];
-
-    resolvedColorByString[color] = resolved;
-    return resolved;
-  };
-
-  // Multiplies two colors channel-by-channel, the same way Godot's
-  // `modulate` works — e.g. modulating "white" by "#808080" halves
-  // brightness, by "#ff0000" keeps only the red channel.
-  const modulateColor = (color: string, modulate: string): string => {
-    const [r1, g1, b1, a1] = resolveColor(color);
-    const [r2, g2, b2, a2] = resolveColor(modulate);
-
-    const mixChannel = (c1: number, c2: number) => (c1 * c2) / 255;
-
-    return `rgba(${mixChannel(r1, r2)}, ${mixChannel(g1, g2)}, ${mixChannel(b1, b2)}, ${mixChannel(a1, a2) / 255})`;
-  };
 
   // Scale is a canvas transform around the renderable's anchor, applied
   // before its type-specific drawing runs below — everything drawn under

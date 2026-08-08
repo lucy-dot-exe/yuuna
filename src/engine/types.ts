@@ -12,6 +12,15 @@ type BaseRenderable = {
   // Godot's `modulate` works — e.g. "#808080" halves brightness, "#ff0000"
   // keeps only the red channel. Accepts any valid CSS color string.
   modulate?: string;
+  // Nested renderables, positioned relative to this one — like Godot's
+  // parent/child nodes. A child's position is added to its parent's
+  // (scaled by the parent's own scale), and scale/modulate/layer all
+  // compose down the tree: a child's effective scale is the parent's
+  // times its own, modulate multiplies the same way, and layer adds (so
+  // it's relative to the parent's, matching Godot's default behavior —
+  // a deeply-nested child can still end up drawn in front of an
+  // unrelated top-level renderable if its accumulated layer says so).
+  children?: Renderable[];
 
   id?: string;
   isClickable?: boolean;

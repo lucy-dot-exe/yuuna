@@ -84,6 +84,16 @@ runEngine<GameState>({
   - `modulate` — a CSS color string that multiplies the renderable's color
     channel-by-channel, the same way Godot's `modulate` works — e.g.
     `"#808080"` halves brightness, `"#ff0000"` keeps only the red channel.
+  - `children` — nested renderables, positioned relative to this one, like
+    Godot's parent/child nodes. A child's `position` is added to its
+    parent's (scaled by the parent's own `scale`), and `scale` / `modulate`
+    / `layer` all compose down the tree — a child's effective scale is the
+    parent's times its own, `modulate` multiplies the same way, and
+    `layer` adds (relative to the parent's, matching Godot's default: a
+    deeply-nested child can still end up drawn in front of an unrelated
+    top-level renderable if its accumulated layer says so). A child is a
+    full `Renderable`, so it can have its own `id` / `isClickable` / even
+    its own `children`.
 - **Events** — your `nextState` function receives one `GameEvent` per call:
   `TIME` (frame tick with `delta`), `CLICK`, `HOVER_IN`, `HOVER_OUT`, or
   `MOUSE_MOVE`.
