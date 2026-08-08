@@ -20,6 +20,17 @@ let latestRunId = 0;
 const DEFAULT_TEXT_FONT_SIZE = 30;
 const textFont = (fontSize: number) => `${fontSize}px Arial`;
 
+// Renderables with the same layer keep render()'s order — Array#sort is
+// stable — so `layer` only needs to move something relative to the rest,
+// not say anything about where exactly it lands among equal layers.
+const sortByLayer = (renderables: Renderable[]): Renderable[] =>
+  [...renderables].sort((a, b) => (a.layer ?? 0) - (b.layer ?? 0));
+
+// A LINE has no `position`, just two endpoints — `from` anchors its scale
+// the same way `position` anchors every other renderable's.
+const anchorOf = (renderable: Renderable): Position =>
+  renderable.type === "LINE" ? renderable.from : renderable.position;
+
 export const runEngine: RunEngineFunction = async <State>(
   props: RunEngineProps<State>
 ) => {
@@ -161,10 +172,24 @@ export const runEngine: RunEngineFunction = async <State>(
       return false;
     }
 
+    // Scale is applied around the renderable's anchor as a draw-time canvas
+    // transform (see applyScale below) rather than by inflating its
+    // size — so hit-testing does the inverse instead: bring the mouse
+    // position into the renderable's own unscaled coordinate space, then
+    // run the exact same math below as if scale were untouched. For
+    // CIRCLE this also happens to be the standard "is this point inside
+    // this ellipse" test, for free, once it's drawing as one.
+    const { x: scaleX, y: scaleY } = r.scale ?? { x: 1, y: 1 };
+    const anchor = anchorOf(r);
+    const localPosition: Position = {
+      x: anchor.x + (position.x - anchor.x) / scaleX,
+      y: anchor.y + (position.y - anchor.y) / scaleY,
+    };
+
     if (r.type === "CIRCLE") {
       const delta = {
-        x: Math.abs(position.x - r.position.x),
-        y: Math.abs(position.y - r.position.y),
+        x: Math.abs(localPosition.x - r.position.x),
+        y: Math.abs(localPosition.y - r.position.y),
       };
 
       const distance = Math.sqrt(delta.x * delta.x + delta.y * delta.y);
@@ -179,8 +204,8 @@ export const runEngine: RunEngineFunction = async <State>(
         y: r.position.y + r.size.height,
       };
 
-      const isInsideX = position.x > topLeft.x && position.x < bottomRight.x;
-      const isInsideY = position.y > topLeft.y && position.y < bottomRight.y;
+      const isInsideX = localPosition.x > topLeft.x && localPosition.x < bottomRight.x;
+      const isInsideY = localPosition.y > topLeft.y && localPosition.y < bottomRight.y;
 
       const isHovered = isInsideX && isInsideY;
       return isHovered;
@@ -189,15 +214,14 @@ export const runEngine: RunEngineFunction = async <State>(
     if (r.type === "SPRITE") {
       const topLeft = { x: r.position.x, y: r.position.y };
       const resource = resourceById[r.resourceId];
-      const { scale = 1 } = r;
 
       const bottomRight = {
-        x: r.position.x + resource.size.width * scale,
-        y: r.position.y + resource.size.height * scale,
+        x: r.position.x + resource.size.width,
+        y: r.position.y + resource.size.height,
       };
 
-      const isInsideX = position.x > topLeft.x && position.x < bottomRight.x;
-      const isInsideY = position.y > topLeft.y && position.y < bottomRight.y;
+      const isInsideX = localPosition.x > topLeft.x && localPosition.x < bottomRight.x;
+      const isInsideY = localPosition.y > topLeft.y && localPosition.y < bottomRight.y;
 
       const isHovered = isInsideX && isInsideY;
 
@@ -222,13 +246,22 @@ export const runEngine: RunEngineFunction = async <State>(
       const top =
         alignY === "middle" ? r.position.y - height / 2 : alignY === "bottom" ? r.position.y - height : r.position.y;
 
-      const isInsideX = position.x > left && position.x < left + width;
-      const isInsideY = position.y > top && position.y < top + height;
+      const isInsideX = localPosition.x > left && localPosition.x < left + width;
+      const isInsideY = localPosition.y > top && localPosition.y < top + height;
 
       return isInsideX && isInsideY;
     }
 
     exhaust(r);
+  };
+
+  // Every call site needs renderables in draw order — the mousemove/click
+  // handlers below to find whichever's topmost under the mouse, the draw
+  // loop to actually draw them that way — so layer is applied once here
+  // instead of separately wherever props.render() gets called.
+  const renderState = (state: State) => {
+    const result = props.render(state);
+    return { cursor: result.cursor, renderables: sortByLayer(result.renderables) };
   };
 
   // ev.offsetX/offsetY are in CSS-rendered pixels, which differ from the
@@ -259,7 +292,7 @@ export const runEngine: RunEngineFunction = async <State>(
 
     if (hoveredId === null) return;
 
-    const { renderables } = props.render(state);
+    const { renderables } = renderState(state);
 
     const hovered = renderables.find((e) => e.id === hoveredId);
 
@@ -304,7 +337,7 @@ export const runEngine: RunEngineFunction = async <State>(
   canvas.addEventListener("mousemove", (ev) => {
     const mouse = getCanvasPosition(ev);
 
-    const { renderables } = props.render(state);
+    const { renderables } = renderState(state);
 
     const hovered = [...renderables]
       .reverse()
@@ -332,7 +365,7 @@ export const runEngine: RunEngineFunction = async <State>(
       return;
     }
 
-    const { renderables } = props.render(state);
+    const { renderables } = renderState(state);
 
     const hovered = renderables.find((r) => r.id === hoveredId);
 
@@ -342,6 +375,92 @@ export const runEngine: RunEngineFunction = async <State>(
   });
 
   context.imageSmoothingEnabled = false;
+
+  // An offscreen 1x1 canvas used only to resolve a CSS color string (a
+  // name, hex, rgb(), hsl(), ...) into concrete RGBA bytes: paint it that
+  // color and read the pixel back. Lets modulateColor() below multiply
+  // any two colors together without hand-rolling a CSS color parser.
+  const colorSwatchContext = window.document.createElement("canvas").getContext("2d");
+
+  // Color strings are almost always the same literal reused every frame,
+  // and getImageData is one of the slower canvas operations — cached so a
+  // given color only actually gets resolved once.
+  const resolvedColorByString: Record<string, [number, number, number, number]> = {};
+
+  const resolveColor = (color: string): [number, number, number, number] => {
+    const cached = resolvedColorByString[color];
+
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    if (colorSwatchContext === null) {
+      return [255, 255, 255, 255];
+    }
+
+    colorSwatchContext.clearRect(0, 0, 1, 1);
+    colorSwatchContext.fillStyle = color;
+    colorSwatchContext.fillRect(0, 0, 1, 1);
+
+    const [r, g, b, a] = colorSwatchContext.getImageData(0, 0, 1, 1).data;
+    const resolved: [number, number, number, number] = [r, g, b, a];
+
+    resolvedColorByString[color] = resolved;
+    return resolved;
+  };
+
+  // Multiplies two colors channel-by-channel, the same way Godot's
+  // `modulate` works — e.g. modulating "white" by "#808080" halves
+  // brightness, by "#ff0000" keeps only the red channel.
+  const modulateColor = (color: string, modulate: string): string => {
+    const [r1, g1, b1, a1] = resolveColor(color);
+    const [r2, g2, b2, a2] = resolveColor(modulate);
+
+    const mixChannel = (c1: number, c2: number) => (c1 * c2) / 255;
+
+    return `rgba(${mixChannel(r1, r2)}, ${mixChannel(g1, g2)}, ${mixChannel(b1, b2)}, ${mixChannel(a1, a2) / 255})`;
+  };
+
+  // Scale is a canvas transform around the renderable's anchor, applied
+  // before its type-specific drawing runs below — everything drawn under
+  // it (fills, strokes, images, even font size) comes out scaled without
+  // each renderable type needing its own size math, and a CIRCLE drawn
+  // under a non-uniform scale comes out an ellipse for free.
+  const applyScale = (renderable: Renderable) => {
+    const { x: scaleX, y: scaleY } = renderable.scale ?? { x: 1, y: 1 };
+
+    if (scaleX === 1 && scaleY === 1) {
+      return;
+    }
+
+    const anchor = anchorOf(renderable);
+    context.translate(anchor.x, anchor.y);
+    context.scale(scaleX, scaleY);
+    context.translate(-anchor.x, -anchor.y);
+  };
+
+  // Tints a just-drawn SPRITE by `modulate`: multiply-blending a filled
+  // rectangle over it would also color the fully-transparent parts of its
+  // bounding box, so this clips that tint back down to the sprite's own
+  // shape afterward by redrawing it (via `redraw`) with `destination-in`,
+  // which keeps only where the two overlap.
+  const tintSprite = (
+    redraw: () => void,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    modulate: string
+  ) => {
+    context.globalCompositeOperation = "multiply";
+    context.fillStyle = modulate;
+    context.fillRect(x, y, width, height);
+
+    context.globalCompositeOperation = "destination-in";
+    redraw();
+
+    context.globalCompositeOperation = "source-over";
+  };
 
   const intervalId = setInterval(() => {
     const now = Date.now();
@@ -384,13 +503,17 @@ export const runEngine: RunEngineFunction = async <State>(
 
     context.clearRect(0, 0, canvas.width, canvas.height);
 
-    const { cursor, renderables } = props.render(state);
+    const { cursor, renderables } = renderState(state);
 
     canvas.style.cursor = cursor ?? "default";
 
     for (const renderable of renderables) {
+      context.save();
+      applyScale(renderable);
+
       if (renderable.type === "RECTANGLE") {
-        context.fillStyle = renderable.color;
+        context.fillStyle =
+          renderable.modulate === undefined ? renderable.color : modulateColor(renderable.color, renderable.modulate);
 
         context.fillRect(
           renderable.position.x,
@@ -399,11 +522,13 @@ export const runEngine: RunEngineFunction = async <State>(
           renderable.size.height
         );
 
+        context.restore();
         continue;
       }
 
       if (renderable.type === "CIRCLE") {
-        context.fillStyle = renderable.color;
+        context.fillStyle =
+          renderable.modulate === undefined ? renderable.color : modulateColor(renderable.color, renderable.modulate);
 
         context.beginPath();
         context.arc(
@@ -415,6 +540,7 @@ export const runEngine: RunEngineFunction = async <State>(
         );
         context.fill();
 
+        context.restore();
         continue;
       }
 
@@ -425,19 +551,21 @@ export const runEngine: RunEngineFunction = async <State>(
           text,
           align,
           fontSize,
+          modulate,
         } = renderable;
-        context.fillStyle = color;
+        context.fillStyle = modulate === undefined ? color : modulateColor(color, modulate);
 
         context.font = textFont(fontSize ?? DEFAULT_TEXT_FONT_SIZE);
         context.textAlign = align?.x ?? "left";
         context.textBaseline = align?.y ?? "top";
         context.fillText(text, x, y);
 
+        context.restore();
         continue;
       }
 
       if (renderable.type === "SPRITE") {
-        const { scale = 1, opacity = 1, flipX = false } = renderable;
+        const { opacity = 1, flipX = false, modulate } = renderable;
         const resource = resourceById[renderable.resourceId];
 
         const frame = {
@@ -447,50 +575,61 @@ export const runEngine: RunEngineFunction = async <State>(
             resource.slices.vertical,
         };
 
-        const destWidth = resource.size.width * scale;
-        const destHeight = resource.size.height * scale;
+        const destWidth = resource.size.width;
+        const destHeight = resource.size.height;
 
         context.globalAlpha = opacity;
+
+        const drawSprite = (destX: number, destY: number) => {
+          context.drawImage(
+            resource.image,
+            frame.x * resource.size.width,
+            frame.y * resource.size.height,
+            resource.size.width,
+            resource.size.height,
+            destX,
+            destY,
+            destWidth,
+            destHeight
+          );
+        };
 
         if (flipX) {
           context.save();
           context.translate(renderable.position.x + destWidth, renderable.position.y);
           context.scale(-1, 1);
 
-          context.drawImage(
-            resource.image,
-            frame.x * resource.size.width,
-            frame.y * resource.size.height,
-            resource.size.width,
-            resource.size.height,
-            0,
-            0,
-            destWidth,
-            destHeight
-          );
+          drawSprite(0, 0);
+
+          if (modulate !== undefined) {
+            tintSprite(() => drawSprite(0, 0), 0, 0, destWidth, destHeight, modulate);
+          }
 
           context.restore();
         } else {
-          context.drawImage(
-            resource.image,
-            frame.x * resource.size.width,
-            frame.y * resource.size.height,
-            resource.size.width,
-            resource.size.height,
-            renderable.position.x,
-            renderable.position.y,
-            destWidth,
-            destHeight
-          );
+          drawSprite(renderable.position.x, renderable.position.y);
+
+          if (modulate !== undefined) {
+            tintSprite(
+              () => drawSprite(renderable.position.x, renderable.position.y),
+              renderable.position.x,
+              renderable.position.y,
+              destWidth,
+              destHeight,
+              modulate
+            );
+          }
         }
 
         context.globalAlpha = 1;
 
+        context.restore();
         continue;
       }
 
       if (renderable.type === "LINE") {
-        context.strokeStyle = renderable.color;
+        context.strokeStyle =
+          renderable.modulate === undefined ? renderable.color : modulateColor(renderable.color, renderable.modulate);
         context.lineWidth = renderable.width ?? 2;
 
         context.beginPath();
@@ -498,6 +637,7 @@ export const runEngine: RunEngineFunction = async <State>(
         context.lineTo(renderable.to.x, renderable.to.y);
         context.stroke();
 
+        context.restore();
         continue;
       }
 

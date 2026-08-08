@@ -1,30 +1,41 @@
-export type RectangleRenderable = {
+// Shared by every Renderable variant below
+type BaseRenderable = {
+  // Higher values render later, i.e. in front of lower ones. Renderables
+  // with the same layer (the default, 0) keep the order render() listed
+  // them in.
+  layer?: number;
+  // Multiplies this renderable's size along each axis, anchored at its
+  // position (or LINE's `from`). Defaults to { x: 1, y: 1 }. A CIRCLE
+  // scaled unevenly draws as an ellipse.
+  scale?: { x: number; y: number };
+  // Multiplies this renderable's color channel-by-channel, the same way
+  // Godot's `modulate` works — e.g. "#808080" halves brightness, "#ff0000"
+  // keeps only the red channel. Accepts any valid CSS color string.
+  modulate?: string;
+
+  id?: string;
+  isClickable?: boolean;
+  isHoverable?: boolean;
+  trackMouseMovement?: boolean;
+};
+
+export type RectangleRenderable = BaseRenderable & {
   type: "RECTANGLE";
 
   position: { x: number; y: number };
   size: { width: number; height: number };
   color: string;
-
-  id?: string;
-  isClickable?: boolean;
-  isHoverable?: boolean;
-  trackMouseMovement?: boolean;
 };
 
-export type CircleRenderable = {
+export type CircleRenderable = BaseRenderable & {
   type: "CIRCLE";
 
   position: { x: number; y: number };
   radius: number;
   color: string;
-
-  id?: string;
-  isClickable?: boolean;
-  isHoverable?: boolean;
-  trackMouseMovement?: boolean;
 };
 
-export type TextRenderable = {
+export type TextRenderable = BaseRenderable & {
   type: "TEXT";
 
   text: string;
@@ -33,41 +44,25 @@ export type TextRenderable = {
   align?: { x: "left" | "center" | "right"; y: "bottom" | "middle" | "top" };
   // Defaults to 30 (pixels) if unset
   fontSize?: number;
-
-  id?: string;
-  isClickable?: boolean;
-  isHoverable?: boolean;
-  trackMouseMovement?: boolean;
 };
 
-export type SpriteRenderable = {
+export type SpriteRenderable = BaseRenderable & {
   type: "SPRITE";
 
   position: { x: number; y: number };
   resourceId: string;
   frame: number;
-  scale?: number;
   opacity?: number;
   flipX?: boolean;
-
-  id?: string;
-  isClickable?: boolean;
-  isHoverable?: boolean;
-  trackMouseMovement?: boolean;
 };
 
-export type LineRenderable = {
+export type LineRenderable = BaseRenderable & {
   type: "LINE";
 
   from: { x: number; y: number };
   to: { x: number; y: number };
   color: string;
   width?: number;
-
-  id?: string;
-  isClickable?: boolean;
-  isHoverable?: boolean;
-  trackMouseMovement?: boolean;
 };
 
 export type Renderable =

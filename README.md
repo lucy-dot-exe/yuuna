@@ -74,7 +74,16 @@ runEngine<GameState>({
 - **Renderables** — declarative shapes drawn each frame: `RECTANGLE`,
   `CIRCLE`, `TEXT`, `SPRITE`, and `LINE`. Give one an `id` plus
   `isClickable` / `isHoverable` / `trackMouseMovement` to make it
-  interactive. `TEXT` also takes a `fontSize` (defaults to `30`).
+  interactive. `TEXT` also takes a `fontSize` (defaults to `30`). Every
+  renderable also takes:
+  - `layer` — higher values render later, i.e. in front of lower ones.
+    Defaults to `0`; renderables on the same layer keep `render()`'s order.
+  - `scale` — `{ x, y }` multiplier on the renderable's size, anchored at
+    its `position` (or `from`, for `LINE`). Defaults to `{ x: 1, y: 1 }`.
+    A `CIRCLE` scaled unevenly draws (and hit-tests) as an ellipse.
+  - `modulate` — a CSS color string that multiplies the renderable's color
+    channel-by-channel, the same way Godot's `modulate` works — e.g.
+    `"#808080"` halves brightness, `"#ff0000"` keeps only the red channel.
 - **Events** — your `nextState` function receives one `GameEvent` per call:
   `TIME` (frame tick with `delta`), `CLICK`, `HOVER_IN`, `HOVER_OUT`, or
   `MOUSE_MOVE`.

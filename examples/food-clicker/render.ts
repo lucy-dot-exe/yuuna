@@ -47,7 +47,7 @@ export const render: RenderFunction = (state) => {
           type: "SPRITE",
           resourceId: "food",
           frame: food.frame,
-          scale: FOOD_SCALE,
+          scale: { x: FOOD_SCALE, y: FOOD_SCALE },
           opacity: Math.max(0, 1 - food.age / FOOD_LIFETIME),
 
           isClickable: true,

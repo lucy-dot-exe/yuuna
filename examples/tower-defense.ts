@@ -79,7 +79,7 @@ const tileGrid = (
         type: "SPRITE",
         resourceId: "terrain",
         frame,
-        scale: TERRAIN_SCALE,
+        scale: { x: TERRAIN_SCALE, y: TERRAIN_SCALE },
         position: {
           x: area.position.x + column * displayTileSize,
           y: area.position.y + row * displayTileSize,
@@ -194,7 +194,7 @@ const render: RenderFunction = (state) => {
         type: "SPRITE",
         resourceId: "skeleton",
         frame: walkFrame,
-        scale: SKELETON_SCALE,
+        scale: { x: SKELETON_SCALE, y: SKELETON_SCALE },
         opacity: Math.max(0.35, enemy.hp / enemy.maxHp),
         position: { x: enemy.x - displaySize / 2, y: LANE_Y - displaySize / 2 },
       };
@@ -212,7 +212,7 @@ const render: RenderFunction = (state) => {
         type: "SPRITE",
         resourceId: "explosion",
         frame,
-        scale: EXPLOSION_SCALE,
+        scale: { x: EXPLOSION_SCALE, y: EXPLOSION_SCALE },
         position: { x: explosion.x - displaySize / 2, y: explosion.y - displaySize / 2 },
       };
     }),
