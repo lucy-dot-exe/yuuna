@@ -16,7 +16,136 @@
 
       #editorContainer {
         width: 100%;
+        height: 100%;
+      }
+
+      .playground-shell {
+        display: flex;
+        width: 100%;
         height: 800px;
+        min-height: 200px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px 6px 0 0;
+        overflow: hidden;
+      }
+
+      .resize-handle {
+        height: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: ns-resize;
+        background: #252526;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        user-select: none;
+        touch-action: none;
+      }
+      .resize-handle .grip {
+        width: 32px;
+        height: 4px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.2);
+        pointer-events: none;
+      }
+      .resize-handle:hover .grip,
+      .resize-handle.dragging .grip {
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      .file-sidebar {
+        width: 190px;
+        flex-shrink: 0;
+        background: #252526;
+        border-right: 1px solid #1e1e1e;
+        overflow-y: auto;
+        font-size: 13px;
+        user-select: none;
+      }
+      .file-sidebar .folder-label {
+        padding: 8px 12px 4px;
+        font-size: 11px;
+        letter-spacing: 0.5px;
+        color: #bbbbbb;
+        font-weight: 600;
+      }
+      .file-sidebar .file-item {
+        padding: 4px 12px 4px 20px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        color: #cccccc;
+        white-space: nowrap;
+      }
+      .file-sidebar .file-item:hover {
+        background: #2a2d2e;
+      }
+      .file-sidebar .file-item.active {
+        background: #37373d;
+        color: #ffffff;
+      }
+
+      .ts-badge {
+        width: 15px;
+        height: 15px;
+        background: #3178c6;
+        color: white;
+        font-size: 8px;
+        font-weight: 700;
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .editor-main {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .tab-bar {
+        display: flex;
+        background: #252526;
+        flex-shrink: 0;
+        overflow-x: auto;
+      }
+      .tab-bar .tab {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 8px 0 12px;
+        height: 32px;
+        background: #2d2d2d;
+        color: #969696;
+        border-right: 1px solid #1e1e1e;
+        font-size: 12.5px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .tab-bar .tab.active {
+        background: #1e1e1e;
+        color: #ffffff;
+        border-top: 2px solid #0d6efd;
+      }
+      .tab-bar .tab .close {
+        width: 15px;
+        height: 15px;
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        color: #969696;
+        flex-shrink: 0;
+      }
+      .tab-bar .tab .close:hover {
+        background: #3c3c3c;
+        color: #fff;
       }
 
       #yuuna {
@@ -258,21 +387,30 @@
                     <select
                       id="exampleSelect"
                       class="form-select form-select-sm"
-                      onchange="loadExample(this.value)"
+                      onchange="loadProject(this.value)"
                     >
                       <optgroup label="Games">
-                        <option value="cookie-clicker.ts" selected>
+                        <option value="cookie-clicker" selected>
                           Cookie Clicker
                         </option>
-                        <option value="square-dash.ts">Square Dash</option>
-                        <option value="food-clicker.ts">Food Clicker</option>
-                        <option value="tower-defense.ts">Tower Defense</option>
+                        <option value="square-dash">Square Dash</option>
+                        <option value="food-clicker">Food Clicker</option>
+                        <option value="tower-defense">Tower Defense</option>
                       </optgroup>
                     </select>
                   </div>
                 </div>
                 <div style="flex: 1 1 0%">
-                  <div id="editorContainer"></div>
+                  <div class="playground-shell" id="playgroundShell">
+                    <div class="file-sidebar" id="fileSidebar"></div>
+                    <div class="editor-main">
+                      <div class="tab-bar" id="tabBar"></div>
+                      <div id="editorContainer"></div>
+                    </div>
+                  </div>
+                  <div class="resize-handle" id="resizeHandle" title="Drag to resize the editor">
+                    <div class="grip"></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -360,70 +498,189 @@
 
     <script>
       let autoReload = true;
+      let manifest = null;
+      let currentProject = null;
+      let models = {}; // fileName -> monaco.editor.ITextModel, for the open project
+      let openTabs = [];
+      let activeFile = null;
 
       function onAutoReloadToggle(checked) {
         autoReload = checked;
       }
 
+      // Drag the handle below the editor to resize it vertically — Monaco's
+      // automaticLayout (set below) picks up the container's new height on
+      // its own, so there's nothing to tell the editor about the resize.
+      (function setupVerticalResize() {
+        const shell = document.getElementById("playgroundShell");
+        const handle = document.getElementById("resizeHandle");
+        const MIN_HEIGHT = 200;
+        const MAX_HEIGHT = 1600;
+
+        let startY = 0;
+        let startHeight = 0;
+
+        function onPointerMove(event) {
+          const height = startHeight + (event.clientY - startY);
+          shell.style.height = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, height)) + "px";
+        }
+
+        function onPointerUp() {
+          handle.classList.remove("dragging");
+          document.removeEventListener("pointermove", onPointerMove);
+          document.removeEventListener("pointerup", onPointerUp);
+        }
+
+        handle.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          startY = event.clientY;
+          startHeight = shell.getBoundingClientRect().height;
+          handle.classList.add("dragging");
+          document.addEventListener("pointermove", onPointerMove);
+          document.addEventListener("pointerup", onPointerUp);
+        });
+      })();
+
       require.config({
         paths: { vs: "https://unpkg.com/monaco-editor@0.30.1/min/vs" },
       });
 
-      function fetchExample(fileName) {
-        return fetch(`./examples/${fileName}`).then((res) => res.text());
-      }
-
       require(["vs/editor/editor.main"], async function () {
-        // Generated from src/engine/types.ts by
-        // scripts/generate-playground-assets.mjs — see package.json's
-        // `build`/`watch` scripts. Fetched instead of hardcoded so the
-        // playground's autocomplete never drifts from the real engine types.
-        const [yuunasContext, defaultExample] = await Promise.all([
+        // yuuna.d.ts is generated from src/engine/types.ts, and
+        // manifest.json from examples/'s actual folder structure, both by
+        // scripts/generate-playground-assets.mjs (see package.json's
+        // `build`/`watch` scripts) — fetched instead of hardcoded so the
+        // playground's autocomplete and file explorer never drift from
+        // the real engine types / what's actually in examples/.
+        const [yuunasContext, loadedManifest] = await Promise.all([
           fetch("./yuuna.d.ts").then((res) => res.text()),
-          fetchExample(document.getElementById("exampleSelect").value),
+          fetch("./examples/manifest.json").then((res) => res.json()),
         ]);
 
-        const yuunasContextModel = monaco.editor.createModel(
-          yuunasContext,
-          "typescript",
-          monaco.Uri.parse("inmemory://model/yuunasContext.d.ts")
-        );
-
-        window.editor = monaco.editor.create(
-          document.getElementById("editorContainer"),
-          {
-            value: defaultExample,
-            language: "typescript",
-            theme: "vs-dark",
-            automaticLayout: true,
-          }
-        );
+        manifest = loadedManifest;
 
         monaco.languages.typescript.typescriptDefaults.addExtraLib(
           yuunasContext,
           "inmemory://model/yuunasContext.d.ts"
         );
 
-        window.editor.onDidChangeModelContent(() => {
-          if (!autoReload) {
-            setAutoReloadButtonState(true);
-            return;
-          }
-
-          updatePreview();
+        // Needed so a multi-file example's `import { GameState } from
+        // "./state"` actually resolves between its files' models instead
+        // of erroring — only overrides the two options that matter for
+        // that, leaving Monaco's other TypeScript defaults alone.
+        monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+          ...monaco.languages.typescript.typescriptDefaults.getCompilerOptions(),
+          module: monaco.languages.typescript.ModuleKind.ESNext,
+          moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
         });
 
-        updatePreview();
+        window.editor = monaco.editor.create(document.getElementById("editorContainer"), {
+          language: "typescript",
+          theme: "vs-dark",
+          automaticLayout: true,
+        });
+
+        await loadProject(document.getElementById("exampleSelect").value);
       });
 
-      // Also written in examples/*.ts — this is what the playground's
-      // "Select an example..." dropdown fetches, so the games only exist
-      // in one place instead of being copied into this page by hand.
-      function loadExample(fileName) {
-        fetchExample(fileName).then((source) => {
-          window.editor.setValue(source);
-          updatePreview();
-        });
+      // Fetches every file belonging to a project (a single-file game is
+      // just a one-file project) and gives each its own Monaco model on a
+      // stable file:///<project>/<file> URI — real enough that the
+      // TypeScript language service resolves the "./state"-style imports
+      // between them the same way it would across real files on disk —
+      // then shows the file explorer + tabs for it.
+      async function loadProject(id) {
+        const project = manifest.examples.find((example) => example.id === id);
+
+        if (project === undefined) {
+          console.error(`No example registered with id "${id}"`);
+          return;
+        }
+
+        for (const file of Object.keys(models)) {
+          models[file].dispose();
+        }
+        models = {};
+
+        for (const file of project.files) {
+          const source = await fetch(`./examples/${id}/${file}`).then((res) => res.text());
+          const model = monaco.editor.createModel(source, "typescript", monaco.Uri.file(`/${id}/${file}`));
+
+          model.onDidChangeContent(() => {
+            if (!autoReload) {
+              setAutoReloadButtonState(true);
+              return;
+            }
+
+            updatePreview();
+          });
+
+          models[file] = model;
+        }
+
+        currentProject = project;
+        openTabs = [project.entry];
+        activeFile = project.entry;
+        window.editor.setModel(models[activeFile]);
+
+        renderExplorer();
+        updatePreview();
+      }
+
+      // Switches which file the editor is showing — opens it as a new tab
+      // the first time, same as clicking a file in VS Code's Explorer
+      function openFile(file) {
+        if (!openTabs.includes(file)) {
+          openTabs.push(file);
+        }
+
+        activeFile = file;
+        window.editor.setModel(models[file]);
+        renderExplorer();
+      }
+
+      // Closing a tab only changes what's showing — it doesn't remove the
+      // file from the project, same as closing a tab in real VS Code
+      function closeTab(file, event) {
+        event.stopPropagation();
+
+        openTabs = openTabs.filter((openFile) => openFile !== file);
+
+        if (openTabs.length === 0) {
+          openTabs = [currentProject.entry];
+        }
+
+        if (activeFile === file) {
+          activeFile = openTabs[openTabs.length - 1];
+          window.editor.setModel(models[activeFile]);
+        }
+
+        renderExplorer();
+      }
+
+      function renderExplorer() {
+        const sidebar = document.getElementById("fileSidebar");
+        sidebar.innerHTML = `<div class="folder-label">${currentProject.label.toUpperCase()}</div>`;
+
+        for (const file of currentProject.files) {
+          const item = document.createElement("div");
+          item.className = "file-item" + (file === activeFile ? " active" : "");
+          item.innerHTML = `<span class="ts-badge">TS</span><span>${file}</span>`;
+          item.onclick = () => openFile(file);
+          sidebar.appendChild(item);
+        }
+
+        const tabBar = document.getElementById("tabBar");
+        tabBar.innerHTML = "";
+
+        for (const file of openTabs) {
+          const tab = document.createElement("div");
+          tab.className = "tab" + (file === activeFile ? " active" : "");
+          tab.innerHTML = `<span class="ts-badge">TS</span><span>${file}</span><span class="close">×</span>`;
+          tab.onclick = () => openFile(file);
+          tab.querySelector(".close").onclick = (event) => closeTab(file, event);
+          tabBar.appendChild(tab);
+        }
       }
 
       function setAutoReloadButtonState(state) {
@@ -438,26 +695,92 @@
         }
       }
 
-      function updatePreview() {
+      // Compiles every file in the current project, strips each one's
+      // import/export statements, orders them so a file always comes
+      // after whatever it locally imports (a topological sort over each
+      // file's own "./x" imports — re-run on every edit, so reordering a
+      // file's imports re-orders execution instead of needing a
+      // hardcoded order), and evals the concatenation as one script.
+      // That's safe specifically because everything ends up sharing one
+      // scope: a cross-file reference like spawnFood() just becomes an
+      // ordinary JS variable reference once both files' code is in the
+      // same eval. Single-file examples go through the exact same path —
+      // with no imports to strip or order, it's a no-op down to today's
+      // "compile the one file, eval it" behavior.
+      async function updatePreview() {
         setAutoReloadButtonState(false);
 
-        monaco.languages.typescript.getTypeScriptWorker().then((worker) => {
-          const uri = window.editor.getModel().uri;
+        if (currentProject === null) {
+          return;
+        }
 
-          worker(uri).then((client) =>
-            client.getEmitOutput(uri.toString()).then((result) => {
-              const compiledCode = result.outputFiles[0].text;
+        const worker = await monaco.languages.typescript.getTypeScriptWorker();
 
-              try {
-                eval(compiledCode);
-              } catch (error) {
-                console.error("Error running the compiled code:", error);
-              }
-            })
-          );
-        });
+        const sourceByFile = {};
+        const compiledByFile = {};
+
+        for (const file of currentProject.files) {
+          const model = models[file];
+          sourceByFile[file] = model.getValue();
+
+          const client = await worker(model.uri);
+          const result = await client.getEmitOutput(model.uri.toString());
+          compiledByFile[file] = result.outputFiles[0]?.text ?? "";
+        }
+
+        const order = topoSortFiles(currentProject.files, sourceByFile);
+        const script = order.map((file) => stripModuleSyntax(compiledByFile[file])).join("\n\n");
+
+        try {
+          eval(script);
+        } catch (error) {
+          console.error("Error running the compiled code:", error);
+        }
       }
 
+      function topoSortFiles(files, sourceByFile) {
+        const baseNameToFile = new Map(files.map((file) => [file.replace(/\.ts$/, ""), file]));
+        const visited = new Set();
+        const order = [];
+
+        function visit(file) {
+          if (visited.has(file)) return;
+          visited.add(file);
+
+          for (const dep of localImportsOf(sourceByFile[file])) {
+            const depFile = baseNameToFile.get(dep);
+            if (depFile !== undefined) visit(depFile);
+          }
+
+          order.push(file);
+        }
+
+        for (const file of files) visit(file);
+
+        return order;
+      }
+
+      // Extracts the "./foo" part of this file's own local imports (import
+      // specifiers spanning multiple lines included), ignoring imports
+      // from packages/ambient globals — there's nothing to order those
+      // against, they're not one of this project's own files
+      function localImportsOf(source) {
+        const importRe = /import\s[^;]*from\s*["']\.\/([\w-]+)["'];?/g;
+        const deps = [];
+        let match;
+
+        while ((match = importRe.exec(source)) !== null) {
+          deps.push(match[1]);
+        }
+
+        return deps;
+      }
+
+      function stripModuleSyntax(code) {
+        return code
+          .replace(/^\s*import\s[^;]*;/gm, "") // dropped — every file shares one scope once concatenated
+          .replace(/^export\s+/gm, ""); // top-level declarations just become plain consts/functions
+      }
     </script>
   </body>
 </html>

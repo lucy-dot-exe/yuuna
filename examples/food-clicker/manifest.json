@@ -1,0 +1,5 @@
+{
+  "label": "Food Clicker",
+  "files": ["constants.ts", "state.ts", "render.ts", "nextState.ts", "main.ts"],
+  "entry": "main.ts"
+}
