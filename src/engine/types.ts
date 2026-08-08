@@ -92,6 +92,10 @@ export type AnimatedSpriteRenderable = BaseRenderable & {
   // Multiplies playback speed — 2 plays twice as fast, 0.5 half speed.
   // Defaults to 1.
   timeScale?: number;
+  // Freezes on the current frame — its clock stops rather than keeps
+  // running unseen, so unpausing resumes from the same frame instead of
+  // skipping ahead by however long it was paused. Defaults to false.
+  paused?: boolean;
   opacity?: number;
   flipX?: boolean;
 

@@ -247,13 +247,23 @@ export const runEngine: RunEngineFunction = async <State>(
     y: parent.anchor.y + localPoint.y * parent.scale.y,
   });
 
-  // When an id's current animation started playing, keyed by id — an
-  // ANIMATED_SPRITE has no state of its own (render() returns brand-new
-  // objects every frame), so this is the only place "since when" lives.
-  // Pruned each renderState() call (see seenAnimationIds there) to only
-  // ids actually present that frame, so a game that spawns entities with
-  // ever-incrementing ids doesn't leak one entry per entity ever spawned.
-  const animationStateById = new Map<string, { animation: string; startTime: number }>();
+  // Each id's accumulated playback time for its current animation, plus
+  // when that was last updated — keyed by id, since an ANIMATED_SPRITE
+  // has no state of its own (render() returns brand-new objects every
+  // frame). elapsedMs only advances while not paused (see
+  // resolveAnimatedSprite), so pausing genuinely stops the clock rather
+  // than just freezing which frame gets drawn — unpausing resumes from
+  // the same frame instead of skipping ahead by however long it was
+  // paused. Accumulating incrementally like this (instead of computing
+  // elapsed from an absolute start time every call) is also what makes
+  // pausing possible at all, and as a side effect means a `timeScale`
+  // that changes over an animation's lifetime scales each tick as it
+  // happens rather than retroactively rescaling the whole duration so
+  // far. Pruned each renderState() call (see seenAnimationIds there) to
+  // only ids actually present that frame, so a game that spawns entities
+  // with ever-incrementing ids doesn't leak one entry per entity ever
+  // spawned.
+  const animationStateById = new Map<string, { animation: string; elapsedMs: number; lastUpdateTime: number }>();
   const seenAnimationIds = new Set<string>();
 
   // Resolves an ANIMATED_SPRITE down to a plain SPRITE with `frame`
@@ -267,6 +277,7 @@ export const runEngine: RunEngineFunction = async <State>(
     const resource = resourceById[renderable.resourceId];
     const animation = resource.animations[renderable.animation];
     const timeScale = renderable.timeScale ?? 1;
+    const paused = renderable.paused ?? false;
 
     const now = Date.now();
     const tracked = animationStateById.get(renderable.id);
@@ -274,12 +285,22 @@ export const runEngine: RunEngineFunction = async <State>(
     // A new id, or the same id switching to a different animation, both
     // start that animation over from frame 0 rather than picking up
     // wherever the previous timer happened to be.
-    const startTime = tracked !== undefined && tracked.animation === renderable.animation ? tracked.startTime : now;
+    const previous =
+      tracked !== undefined && tracked.animation === renderable.animation
+        ? tracked
+        : { animation: renderable.animation, elapsedMs: 0, lastUpdateTime: now };
 
-    animationStateById.set(renderable.id, { animation: renderable.animation, startTime });
+    const elapsedMs = paused
+      ? previous.elapsedMs
+      : previous.elapsedMs + Math.max(0, now - previous.lastUpdateTime) * timeScale;
 
-    const elapsed = Math.max(0, now - startTime) * timeScale;
-    const frameCursor = Math.floor(elapsed / animation.frameDuration);
+    // lastUpdateTime always moves forward, paused or not — otherwise the
+    // first tick after unpausing would see a gap stretching back to
+    // whenever it was paused, and (dis)count that whole gap as elapsed
+    // playback time in one jump.
+    animationStateById.set(renderable.id, { animation: renderable.animation, elapsedMs, lastUpdateTime: now });
+
+    const frameCursor = Math.floor(elapsedMs / animation.frameDuration);
     const frameIndex = animation.loop
       ? frameCursor % animation.frames.length
       : Math.min(frameCursor, animation.frames.length - 1);

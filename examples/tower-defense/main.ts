@@ -11,8 +11,10 @@ import {
   CAMERA,
   SKELETON_FRAME_SIZE,
   SKELETON_FRAME_COUNT,
+  WALK_FRAME_DURATION,
   EXPLOSION_FRAME_SIZE,
   EXPLOSION_FRAME_COUNT,
+  EXPLOSION_FRAME_DURATION,
   TERRAIN_TILE_SIZE,
   TERRAIN_TILE_COUNT,
 } from "./constants";
@@ -63,11 +65,31 @@ Yuuna.runEngine<GameState>({
       src: "./resources/skeleton.png",
       size: { width: SKELETON_FRAME_SIZE * SKELETON_FRAME_COUNT, height: SKELETON_FRAME_SIZE },
       slices: { horizontal: SKELETON_FRAME_COUNT, vertical: 1 },
+      animations: {
+        // Walks through every frame in the sheet, in order, forever —
+        // render.ts just says animation: "walk" instead of computing
+        // which frame to show from state.elapsed by hand.
+        walk: {
+          frames: Array.from({ length: SKELETON_FRAME_COUNT }, (_, frame) => frame),
+          frameDuration: WALK_FRAME_DURATION,
+          loop: true,
+        },
+      },
     },
     explosion: {
       src: "./resources/explosion.png",
       size: { width: EXPLOSION_FRAME_SIZE * EXPLOSION_FRAME_COUNT, height: EXPLOSION_FRAME_SIZE },
       slices: { horizontal: EXPLOSION_FRAME_COUNT, vertical: 1 },
+      animations: {
+        // Plays once and holds on the last frame — resolveKills/
+        // ageExplosions in nextState.ts still own how long the
+        // explosion entity itself sticks around in state.
+        burst: {
+          frames: Array.from({ length: EXPLOSION_FRAME_COUNT }, (_, frame) => frame),
+          frameDuration: EXPLOSION_FRAME_DURATION,
+          loop: false,
+        },
+      },
     },
     terrain: {
       src: "./resources/terrain.png",

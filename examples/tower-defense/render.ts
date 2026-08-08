@@ -9,12 +9,8 @@ import {
   LANE_HEIGHT,
   TURRET_COST,
   SKELETON_FRAME_SIZE,
-  SKELETON_FRAME_COUNT,
   SKELETON_SCALE,
-  WALK_FRAME_DURATION,
   EXPLOSION_FRAME_SIZE,
-  EXPLOSION_FRAME_COUNT,
-  EXPLOSION_FRAME_DURATION,
   EXPLOSION_SCALE,
   TERRAIN_TILE_SIZE,
   TERRAIN_SCALE,
@@ -71,9 +67,8 @@ const HP_BAR_HEIGHT = 5;
 // moveEnemies in nextState.ts only ever has to move this one anchor
 // point — the skeleton and health bar ride along with it instead of each
 // needing enemy.x/LANE_Y re-added by hand.
-const enemyGroup = (enemy: Enemy, elapsed: number): Renderable => {
+const enemyGroup = (enemy: Enemy, paused: boolean): Renderable => {
   const displaySize = SKELETON_FRAME_SIZE * SKELETON_SCALE;
-  const walkFrame = Math.floor(elapsed / WALK_FRAME_DURATION) % SKELETON_FRAME_COUNT;
   const hpFraction = Math.max(0, enemy.hp / enemy.maxHp);
 
   // Tints the skeleton redder as it takes damage (dimming green/blue,
@@ -87,9 +82,13 @@ const enemyGroup = (enemy: Enemy, elapsed: number): Renderable => {
 
     children: [
       {
-        type: "SPRITE",
+        type: "ANIMATED_SPRITE",
+        id: `enemy-${enemy.id}-skeleton`,
         resourceId: "skeleton",
-        frame: walkFrame,
+        animation: "walk",
+        // Freezes the walk cycle once the game's over, instead of every
+        // skeleton still marching in place behind the "Game Over" text.
+        paused,
         scale: { x: SKELETON_SCALE, y: SKELETON_SCALE },
         opacity: Math.max(0.35, hpFraction),
         modulate: `rgb(255, ${damageChannel}, ${damageChannel})`,
@@ -151,20 +150,20 @@ export const render: RenderFunction = (state) => {
         tileGrid(lane, TERRAIN_PATH_FRAME),
 
         // A walking skeleton + health bar for each enemy — see enemyGroup
-        ...state.enemies.map((enemy): Renderable => enemyGroup(enemy, state.elapsed)),
+        ...state.enemies.map((enemy): Renderable => enemyGroup(enemy, state.lives <= 0)),
 
-        // A one-shot burst where an enemy died
+        // A one-shot burst where an enemy died — plays once and holds on
+        // its last frame (see the "burst" animation in main.ts); how long
+        // the explosion entity itself survives in state is still
+        // resolveKills/ageExplosions' job, unrelated to which frame shows
         ...state.explosions.map((explosion): Renderable => {
           const displaySize = EXPLOSION_FRAME_SIZE * EXPLOSION_SCALE;
-          const frame = Math.min(
-            EXPLOSION_FRAME_COUNT - 1,
-            Math.floor(explosion.age / EXPLOSION_FRAME_DURATION)
-          );
 
           return {
-            type: "SPRITE",
+            type: "ANIMATED_SPRITE",
+            id: `explosion-${explosion.id}`,
             resourceId: "explosion",
-            frame,
+            animation: "burst",
             scale: { x: EXPLOSION_SCALE, y: EXPLOSION_SCALE },
             layer: LAYERS.explosion,
             position: { x: explosion.x - displaySize / 2, y: explosion.y - displaySize / 2 },

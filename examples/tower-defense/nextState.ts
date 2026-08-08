@@ -118,6 +118,7 @@ export const resolveKills: NextStateFunction<GameState> = ({ state, event }) => 
   if (event.tag === "TIME") {
     let score = state.score;
     let gold = state.gold;
+    let nextExplosionId = state.nextExplosionId;
     const newExplosions: Explosion[] = [];
 
     const enemies = state.enemies.filter((enemy) => {
@@ -125,7 +126,8 @@ export const resolveKills: NextStateFunction<GameState> = ({ state, event }) => 
 
       score += 1;
       gold += enemy.maxHp;
-      newExplosions.push({ x: enemy.x, y: LANE_Y, age: 0 });
+      newExplosions.push({ id: nextExplosionId, x: enemy.x, y: LANE_Y, age: 0 });
+      nextExplosionId += 1;
       return false;
     });
 
@@ -135,6 +137,7 @@ export const resolveKills: NextStateFunction<GameState> = ({ state, event }) => 
       score,
       gold,
       explosions: [...state.explosions, ...newExplosions],
+      nextExplosionId,
     };
   }
 };
