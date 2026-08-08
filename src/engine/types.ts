@@ -80,6 +80,30 @@ export type LineRenderable = BaseRenderable & {
   width?: number;
 };
 
+// Like SPRITE, but you say which named animation (from that resource's
+// `animations`, see RunEngineProps.resources) to play instead of a frame
+// number — the engine tracks playback and picks the frame itself.
+export type AnimatedSpriteRenderable = BaseRenderable & {
+  type: "ANIMATED_SPRITE";
+
+  position: { x: number; y: number };
+  resourceId: string;
+  animation: string;
+  // Multiplies playback speed — 2 plays twice as fast, 0.5 half speed.
+  // Defaults to 1.
+  timeScale?: number;
+  opacity?: number;
+  flipX?: boolean;
+
+  // Required — unlike every other renderable's optional id. render()
+  // returns brand-new objects every frame, so the engine has no way to
+  // recognize "this is the same sprite as last frame" (and therefore
+  // when its current animation actually started) except by id. Reusing
+  // one id across two different logical entities makes their animation
+  // timers bleed into each other.
+  id: string;
+};
+
 // Draws nothing itself — just a position (plus the usual scale/modulate/
 // layer) for `children` to be relative to, for grouping renderables that
 // should move/scale/tint together without needing a visible shape of its
@@ -96,7 +120,8 @@ export type Renderable =
   | SpriteRenderable
   | TextRenderable
   | LineRenderable
-  | GroupRenderable;
+  | GroupRenderable
+  | AnimatedSpriteRenderable;
 
 export type TimeEvent = { tag: "TIME"; delta: number };
 
@@ -204,6 +229,23 @@ export type RunEngineProps<State> = {
       src: string;
       size: { width: number; height: number };
       slices: { vertical: number; horizontal: number };
+      // Named animations for this spritesheet — reference one by name
+      // from an ANIMATED_SPRITE renderable's `animation` field.
+      animations?: Record<
+        string,
+        {
+          // Which frames (in the same numbering SPRITE's `frame` uses)
+          // to play, in order. Can repeat/skip/reorder frames.
+          frames: number[];
+          // Milliseconds each frame is shown, before timeScale.
+          frameDuration: number;
+          // false holds on the last frame once played through, instead
+          // of restarting — required rather than defaulted, since
+          // getting this wrong silently (e.g. an explosion looping
+          // forever) is an easy, confusing mistake.
+          loop: boolean;
+        }
+      >;
     }
   >;
   // Sound effects, keyed by an id you pick — play one from a

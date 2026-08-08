@@ -3,6 +3,7 @@ import { Position } from "../utils/Position";
 import { iterateRecord, iterateRecordAsync } from "../utils/iterateRecord";
 import { createRecord } from "../utils/createRecord";
 import {
+  AnimatedSpriteRenderable,
   GameEvent,
   KeyboardState,
   Renderable,
@@ -83,6 +84,7 @@ export const runEngine: RunEngineFunction = async <State>(
         image: HTMLImageElement;
         size: { width: number; height: number };
         slices: { horizontal: number; vertical: number };
+        animations: Record<string, { frames: number[]; frameDuration: number; loop: boolean }>;
       }>((resolve) => {
         const image = new Image();
 
@@ -96,6 +98,7 @@ export const runEngine: RunEngineFunction = async <State>(
               height: value.size.height / value.slices.vertical,
             },
             slices: value.slices,
+            animations: value.animations ?? {},
           });
         };
       })
@@ -244,6 +247,46 @@ export const runEngine: RunEngineFunction = async <State>(
     y: parent.anchor.y + localPoint.y * parent.scale.y,
   });
 
+  // When an id's current animation started playing, keyed by id — an
+  // ANIMATED_SPRITE has no state of its own (render() returns brand-new
+  // objects every frame), so this is the only place "since when" lives.
+  // Pruned each renderState() call (see seenAnimationIds there) to only
+  // ids actually present that frame, so a game that spawns entities with
+  // ever-incrementing ids doesn't leak one entry per entity ever spawned.
+  const animationStateById = new Map<string, { animation: string; startTime: number }>();
+  const seenAnimationIds = new Set<string>();
+
+  // Resolves an ANIMATED_SPRITE down to a plain SPRITE with `frame`
+  // computed from how long its current animation has been playing —
+  // everything past this point (flattenRenderable's position/scale/
+  // modulate/layer composition, hit-testing, drawing) treats the result
+  // exactly like any other SPRITE, with no idea ANIMATED_SPRITE exists.
+  const resolveAnimatedSprite = (renderable: AnimatedSpriteRenderable): Renderable => {
+    seenAnimationIds.add(renderable.id);
+
+    const resource = resourceById[renderable.resourceId];
+    const animation = resource.animations[renderable.animation];
+    const timeScale = renderable.timeScale ?? 1;
+
+    const now = Date.now();
+    const tracked = animationStateById.get(renderable.id);
+
+    // A new id, or the same id switching to a different animation, both
+    // start that animation over from frame 0 rather than picking up
+    // wherever the previous timer happened to be.
+    const startTime = tracked !== undefined && tracked.animation === renderable.animation ? tracked.startTime : now;
+
+    animationStateById.set(renderable.id, { animation: renderable.animation, startTime });
+
+    const elapsed = Math.max(0, now - startTime) * timeScale;
+    const frameCursor = Math.floor(elapsed / animation.frameDuration);
+    const frameIndex = animation.loop
+      ? frameCursor % animation.frames.length
+      : Math.min(frameCursor, animation.frames.length - 1);
+
+    return { ...renderable, type: "SPRITE", frame: animation.frames[frameIndex] };
+  };
+
   // Turns a render() tree into the flat list the rest of the engine
   // already knows how to sort/draw/hit-test — each renderable's own
   // position/from/to/scale/modulate/layer replaced by the *effective*
@@ -252,25 +295,27 @@ export const runEngine: RunEngineFunction = async <State>(
   // instead of staying nested. Nothing past this point needs to know
   // parent/child relationships existed at all.
   const flattenRenderable = (renderable: Renderable, parent: Transform): Renderable[] => {
-    const localScale = renderable.scale ?? { x: 1, y: 1 };
+    const resolved = renderable.type === "ANIMATED_SPRITE" ? resolveAnimatedSprite(renderable) : renderable;
+
+    const localScale = resolved.scale ?? { x: 1, y: 1 };
     const scale = { x: parent.scale.x * localScale.x, y: parent.scale.y * localScale.y };
-    const modulate = composeModulate(parent.modulate, renderable.modulate);
-    const layer = parent.layer + (renderable.layer ?? 0);
+    const modulate = composeModulate(parent.modulate, resolved.modulate);
+    const layer = parent.layer + (resolved.layer ?? 0);
 
     const effective: Renderable =
-      renderable.type === "LINE"
+      resolved.type === "LINE"
         ? {
-            ...renderable,
-            from: transformPoint(parent, renderable.from),
-            to: transformPoint(parent, renderable.to),
+            ...resolved,
+            from: transformPoint(parent, resolved.from),
+            to: transformPoint(parent, resolved.to),
             scale,
             modulate,
             layer,
             children: undefined,
           }
         : {
-            ...renderable,
-            position: transformPoint(parent, renderable.position),
+            ...resolved,
+            position: transformPoint(parent, resolved.position),
             scale,
             modulate,
             layer,
@@ -278,7 +323,7 @@ export const runEngine: RunEngineFunction = async <State>(
           };
 
     const childTransform: Transform = { anchor: anchorOf(effective), scale, modulate, layer };
-    const children = (renderable.children ?? []).flatMap((child) => flattenRenderable(child, childTransform));
+    const children = (resolved.children ?? []).flatMap((child) => flattenRenderable(child, childTransform));
 
     return [effective, ...children];
   };
@@ -294,6 +339,11 @@ export const runEngine: RunEngineFunction = async <State>(
     const isNonInteractable =
       r.type === "LINE" ||
       r.type === "GROUP" ||
+      // Unreachable — flattenRenderable always resolves ANIMATED_SPRITE
+      // to a plain SPRITE before hit-testing ever sees one. Listed here
+      // (rather than left for exhaust() to catch) so getFocusedElement
+      // itself type-checks as exhaustive.
+      r.type === "ANIMATED_SPRITE" ||
       ((r.isHoverable === undefined || !r.isHoverable) &&
         (r.isClickable === undefined || !r.isClickable));
 
@@ -417,10 +467,21 @@ export const runEngine: RunEngineFunction = async <State>(
     const worldRenderables = result.renderables.filter((r) => !r.screenSpace);
     const screenRenderables = result.renderables.filter((r) => r.screenSpace);
 
+    seenAnimationIds.clear();
+
     const renderables = sortByLayer([
       ...flattenRenderables(worldRenderables, cameraTransform),
       ...flattenRenderables(screenRenderables),
     ]);
+
+    // Anything not seen this pass is no longer being rendered (e.g. the
+    // entity it belonged to died) — drop its tracked start time instead
+    // of keeping it forever.
+    for (const id of animationStateById.keys()) {
+      if (!seenAnimationIds.has(id)) {
+        animationStateById.delete(id);
+      }
+    }
 
     return { cursor: result.cursor, renderables, camera };
   };
@@ -805,6 +866,14 @@ export const runEngine: RunEngineFunction = async <State>(
         // something to be positioned/scaled/tinted relative to.
         context.restore();
         continue;
+      }
+
+      if (renderable.type === "ANIMATED_SPRITE") {
+        // Unreachable — flattenRenderable always resolves ANIMATED_SPRITE
+        // to a plain SPRITE before it gets here. A real error (not a
+        // silent skip) if it's somehow still one, since that would mean
+        // an actual engine bug rather than anything a game author did.
+        throw new Error("ANIMATED_SPRITE reached the draw loop unresolved — this is an engine bug");
       }
 
       exhaust(renderable);

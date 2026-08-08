@@ -72,14 +72,22 @@ runEngine<GameState>({
 ## Concepts
 
 - **Renderables** — declarative shapes drawn each frame: `RECTANGLE`,
-  `CIRCLE`, `TEXT`, `SPRITE`, `LINE`, and `GROUP`. Give one an `id` plus
-  `isClickable` / `isHoverable` / `trackMouseMovement` to make it
-  interactive. `TEXT` also takes a `fontSize` (defaults to `30`). `GROUP`
-  draws nothing itself — it's just a `position` (plus the usual
+  `CIRCLE`, `TEXT`, `SPRITE`, `LINE`, `GROUP`, and `ANIMATED_SPRITE`. Give
+  one an `id` plus `isClickable` / `isHoverable` / `trackMouseMovement` to
+  make it interactive. `TEXT` also takes a `fontSize` (defaults to `30`).
+  `GROUP` draws nothing itself — it's just a `position` (plus the usual
   `scale`/`modulate`/`layer` below) for `children` to hang off of, for
   grouping renderables that should move/scale/tint together without
   needing a shape of its own; it's never interactable, since it has no
-  shape to hit-test. Every renderable also takes:
+  shape to hit-test. `ANIMATED_SPRITE` is `SPRITE` with an `animation`
+  (name of one defined on that resource — see Sprites below) and an
+  optional `timeScale` instead of a `frame` number; the engine picks the
+  frame for you based on how long it's been playing. Unlike every other
+  renderable, its `id` is required — that's how the engine recognizes
+  "this is the same sprite as last frame" across renders (and switches to
+  frame 0 if `animation` changes for that `id`), so reusing an id across
+  two different entities will make their animations bleed together.
+  Every renderable also takes:
   - `layer` — higher values render later, i.e. in front of lower ones.
     Defaults to `0`; renderables on the same layer keep `render()`'s order.
   - `scale` — `{ x, y }` multiplier on the renderable's size, anchored at
@@ -121,7 +129,9 @@ runEngine<GameState>({
   `runEngine` to load spritesheets, then reference them by id with a
   `SPRITE` renderable's `resourceId` and `frame`. Set `flipX: true` to
   mirror a sprite horizontally — useful when the art is drawn facing one
-  direction but needs to move the other way.
+  direction but needs to move the other way. Add an `animations` map to a
+  resource — `{ frames: number[], frameDuration, loop }` each — to play
+  one with `ANIMATED_SPRITE` instead of managing `frame` by hand.
 - **Sound effects** — pass a `sounds` map of `{ src }` to `runEngine`, then
   call the `playSound(id)` function `nextState` receives to play one, e.g.
   `playSound("collect")` when a cookie is clicked. Calling it again while
