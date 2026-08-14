@@ -97,6 +97,25 @@ reference, with every option and example, lives on the
 [playground](https://lucy-dot-exe.github.io/yuuna/#playground) also has a
 small, focused example for most of these you can run and edit directly.
 
+## Templates
+
+Prefer a working starting point over typing the quick start out by
+hand? Grab one from [`templates/`](templates):
+
+- **[blank](templates/blank)** — a single `index.html`, zero install —
+  open it in a browser and it runs.
+- **[npm](templates/npm)** — TypeScript + a dev server with hot reload
+  (via Vite), for a real local project.
+
+```sh
+npx degit lucy-dot-exe/yuuna/templates/blank my-game
+# or: npx degit lucy-dot-exe/yuuna/templates/npm my-game
+```
+
+[`degit`](https://github.com/Rich-Harris/degit) copies the folder without
+its git history — no cloning or forking the whole engine repo needed.
+Each template's own README has more on running it once copied.
+
 ## Development
 
 ```sh
