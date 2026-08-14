@@ -678,6 +678,15 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     events.push({ tag: "MOUSE_LEAVE", mouse, worldMouse });
   });
 
+  // Tab switches are a document-level concern (visibilitychange), not
+  // something that ever reaches the canvas itself the way mouse/keyboard
+  // events do.
+  const handleVisibilityChange = () => {
+    events.push({ tag: window.document.hidden ? "TAB_BLUR" : "TAB_FOCUS" });
+  };
+
+  window.document.addEventListener("visibilitychange", handleVisibilityChange);
+
   context.imageSmoothingEnabled = false;
 
   // Scale is a canvas transform around the renderable's anchor, applied
@@ -981,6 +990,12 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     // per-run element, not something the next run has any way to reach.
     currentMusic?.pause();
     currentMusic = null;
+
+    // Unlike the canvas's own listeners (thrown away with the canvas
+    // element itself, if it ever is), this is on `document` — it outlives
+    // this run and has to be removed explicitly, or the next run's
+    // handler stacks alongside it instead of replacing it.
+    window.document.removeEventListener("visibilitychange", handleVisibilityChange);
   };
 
   return { sendEvent };

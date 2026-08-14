@@ -175,6 +175,17 @@ export type MouseLeaveEvent = {
   worldMouse: { x: number; y: number };
 };
 
+// Fires when the browser tab the game is running in is switched away from
+// (backgrounded, minimized, another tab focused, ...) — driven by the
+// page's visibilitychange, not window focus, so it fires for actual tab/
+// window switches without false-firing on things like a devtools panel
+// stealing focus.
+export type TabBlurEvent = { tag: "TAB_BLUR" };
+
+// Fires when the tab becomes the active one again after a TabBlurEvent —
+// the natural place to resumeMusic() or unpause whatever TAB_BLUR paused.
+export type TabFocusEvent = { tag: "TAB_FOCUS" };
+
 // Fires when a music track (started with playMusic) reaches its end —
 // only for a track configured with loop: false in RunEngineProps.music,
 // since a looping track restarts instead of ever "ending".
@@ -187,6 +198,8 @@ export type GameEvent =
   | HoverOutEvent
   | MouseMoveEvent
   | MouseLeaveEvent
+  | TabBlurEvent
+  | TabFocusEvent
   | MusicEndEvent;
 
 // Wraps whatever type you pass as RunEngineProps's Custom type parameter
