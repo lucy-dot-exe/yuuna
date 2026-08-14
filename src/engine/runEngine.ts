@@ -178,6 +178,10 @@ export const runEngine: RunEngineFunction = async <State>(
     currentMusic?.pause();
   };
 
+  const resumeMusic = () => {
+    currentMusic?.play();
+  };
+
   const setMusicVolume = (volume: number) => {
     musicVolume = Math.min(1, Math.max(0, volume));
 
@@ -749,7 +753,16 @@ export const runEngine: RunEngineFunction = async <State>(
       );
 
       for (const nextState of nextStateFns) {
-        const result = nextState({ state, event, keyboard, playSound, playMusic, pauseMusic, setMusicVolume });
+        const result = nextState({
+          state,
+          event,
+          keyboard,
+          playSound,
+          playMusic,
+          pauseMusic,
+          resumeMusic,
+          setMusicVolume,
+        });
 
         // STOP stops the rest of the list from running for this event,
         // instead of every later mechanic needing to repeat the same

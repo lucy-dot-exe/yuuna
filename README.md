@@ -139,11 +139,12 @@ runEngine<GameState>({
   a sound is still playing overlaps a new copy instead of cutting the
   first one off.
 - **Music** — pass a `music` map of `{ src, loop? }` to `runEngine`, then
-  use the `playMusic(id)` / `pauseMusic()` functions `nextState` receives
-  to control a background track. Unlike `playSound`, only one track plays
-  at a time and it keeps running in the background across frames instead
-  of firing once; `pauseMusic()` leaves it where it stopped, so calling
-  `playMusic(id)` again resumes it instead of starting over.
+  use the `playMusic(id)` / `pauseMusic()` / `resumeMusic()` functions
+  `nextState` receives to control a background track. Unlike `playSound`,
+  only one track plays at a time and it keeps running in the background
+  across frames instead of firing once; `pauseMusic()` leaves it where it
+  stopped, so `resumeMusic()` (or calling `playMusic(id)` again) continues
+  it instead of starting over.
   `setMusicVolume(volume)` (0 to 1) controls whichever track is current
   and whatever plays next — volume isn't per-track, so switching tracks
   with `playMusic` keeps the volume you last set instead of resetting to
