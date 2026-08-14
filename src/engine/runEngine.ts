@@ -975,6 +975,12 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
   resetCanvas = () => {
     clearInterval(intervalId);
+
+    // Otherwise a track started by this run keeps playing underneath
+    // whatever the next runEngine() call starts — currentMusic is a
+    // per-run element, not something the next run has any way to reach.
+    currentMusic?.pause();
+    currentMusic = null;
   };
 
   return { sendEvent };
