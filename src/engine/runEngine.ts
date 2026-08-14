@@ -5,6 +5,7 @@ import { createRecord } from "../utils/createRecord";
 import { getKeys } from "../utils/getKeys";
 import {
   AnimatedSpriteRenderable,
+  CustomGameEvent,
   GameEvent,
   KeyboardState,
   Renderable,
@@ -36,8 +37,8 @@ const anchorOf = (renderable: Renderable): Position =>
 // No RunEngineProps.camera set is the same as one that doesn't pan or zoom.
 const DEFAULT_CAMERA = { x: 0, y: 0, zoom: 1 };
 
-export const runEngine: RunEngineFunction = async <State>(
-  props: RunEngineProps<State>
+export const runEngine: RunEngineFunction = async <State, Custom = never>(
+  props: RunEngineProps<State, Custom>
 ) => {
   const runId = ++latestRunId;
 
@@ -77,7 +78,15 @@ export const runEngine: RunEngineFunction = async <State>(
 
   let state: State = props.initialState;
 
-  const events: GameEvent[] = [];
+  const events: (GameEvent | CustomGameEvent<Custom>)[] = [];
+
+  // Lets a caller report something that happened outside the render loop
+  // (e.g. a fetch().then() callback) back into it — the event is queued
+  // here and delivered to nextState as a CustomGameEvent on the next tick,
+  // the same as any built-in event.
+  const sendEvent = (event: Custom) => {
+    events.push({ tag: "CUSTOM", event });
+  };
 
   const resources = props.resources ?? {};
   const resourceById = await iterateRecordAsync(
@@ -194,7 +203,7 @@ export const runEngine: RunEngineFunction = async <State>(
   // resources (e.g. a spritesheet) — abandon this run instead of setting
   // up a second, orphaned render loop alongside the newer one.
   if (runId !== latestRunId) {
-    return;
+    return { sendEvent };
   }
 
   context.imageSmoothingEnabled = false;
@@ -945,4 +954,6 @@ export const runEngine: RunEngineFunction = async <State>(
   resetCanvas = () => {
     clearInterval(intervalId);
   };
+
+  return { sendEvent };
 };

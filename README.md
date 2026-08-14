@@ -123,6 +123,37 @@ runEngine<GameState>({
   transform — use to place/locate world-space things, e.g. build a turret
   where the player clicked). With no `camera` set, `worldMouse` always
   equals `mouse`.
+- **Custom events** — `runEngine`'s second type parameter is your own
+  event payload type; give it one and `nextState`'s `event` can also be a
+  `{ tag: "CUSTOM", event: YourType }`, alongside the built-in events
+  above. `runEngine()` resolves with a `sendEvent(event)` function you
+  call from anywhere — not just from inside `nextState` — to deliver it
+  as a `CUSTOM` event on a later tick. That's the point: reporting
+  something that finished outside the normal render-loop-driven flow,
+  like a `fetch()` resolving.
+
+  ```ts
+  type FetchEvent = { status: "done"; body: string } | { status: "failed" };
+
+  const { sendEvent } = await runEngine<GameState, FetchEvent>({
+    initialState,
+    render,
+    nextState: ({ state, event }) => {
+      if (event.tag === "CUSTOM") {
+        return event.event.status === "done"
+          ? { ...state, result: event.event.body }
+          : { ...state, result: "failed" };
+      }
+
+      return state;
+    },
+  });
+
+  fetch("/api/whatever")
+    .then((res) => res.text())
+    .then((body) => sendEvent({ status: "done", body }))
+    .catch(() => sendEvent({ status: "failed" }));
+  ```
 - **Keyboard** — `nextState` also receives a `keyboard` map keyed by
   `KeyCode`-style keys (e.g. `"KeyW"`, `"ArrowLeft"`, `"Space"`), each with
   `isPressed` / `isJustPressed` / `isJustReleased`.

@@ -176,9 +176,18 @@ export type GameEvent =
   | MouseMoveEvent
   | MusicEndEvent;
 
-export type NextStateProps<State> = {
+// Wraps whatever type you pass as RunEngineProps's Custom type parameter
+// — its shape is entirely up to you, unlike the built-in GameEvent
+// variants above. Sent with the sendEvent() function runEngine() resolves
+// with, from anywhere (not just inside a NextStateFunction) — e.g. a
+// fetch().then() callback once an async request completes, which is the
+// point of custom events: reporting the result of something that
+// happened outside the normal render-loop-driven flow of TIME/CLICK/etc.
+export type CustomGameEvent<Custom> = { tag: "CUSTOM"; event: Custom };
+
+export type NextStateProps<State, Custom = never> = {
   state: State;
-  event: GameEvent;
+  event: GameEvent | CustomGameEvent<Custom>;
   keyboard: Record<
     KeyboardKeys,
     {
@@ -228,11 +237,11 @@ export const STOP = "Yuuna.STOP" as const;
 //    `if (...) return;` instead of `if (...) return state;`
 //  - STOP to make no change AND stop the rest of the list from running
 //    for this event
-export type NextStateFunction<State> = (
-  props: NextStateProps<State>
+export type NextStateFunction<State, Custom = never> = (
+  props: NextStateProps<State, Custom>
 ) => State | typeof STOP | undefined;
 
-export type RunEngineProps<State> = {
+export type RunEngineProps<State, Custom = never> = {
   initialState: State;
   render: (state: State) => {
     cursor?: "default" | "pointer";
@@ -242,7 +251,7 @@ export type RunEngineProps<State> = {
   // order for each event — the output of one feeds into the next, so you
   // can break a game down into small, independent functions instead of
   // one large nextState.
-  nextState: NextStateFunction<State> | NextStateFunction<State>[];
+  nextState: NextStateFunction<State, Custom> | NextStateFunction<State, Custom>[];
   resources?: Record<
     string,
     {
@@ -301,9 +310,15 @@ export type RunEngineProps<State> = {
   camera?: (state: State) => { x: number; y: number; zoom: number };
 };
 
-export type RunEngineFunction = <State>(
-  props: RunEngineProps<State>
-) => Promise<void>;
+export type RunEngineFunction = <State, Custom = never>(
+  props: RunEngineProps<State, Custom>
+) => Promise<{
+  // Dispatches a custom event, delivered to nextState as a
+  // CustomGameEvent on a later tick — the way to report something that
+  // happened outside the render loop (e.g. an async fetch resolving)
+  // back into it. Call from anywhere, not just from within nextState.
+  sendEvent: (event: Custom) => void;
+}>;
 
 export const keyboardKeys = [
   "ControlLeft",
