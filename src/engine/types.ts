@@ -163,6 +163,18 @@ export type MouseMoveEvent = {
   worldMouse: { x: number; y: number };
 };
 
+// Fires when the mouse leaves the canvas entirely — mouse/worldMouse are
+// the position it left from (still meaningful, even though it's now
+// outside the canvas, e.g. to tell which edge it exited through). Also
+// implies a HOVER_OUT for whatever was hovered, if anything was, since a
+// mousemove inside the canvas — what HOVER_OUT normally rides along
+// with — can no longer happen once the mouse isn't over it.
+export type MouseLeaveEvent = {
+  tag: "MOUSE_LEAVE";
+  mouse: { x: number; y: number };
+  worldMouse: { x: number; y: number };
+};
+
 // Fires when a music track (started with playMusic) reaches its end —
 // only for a track configured with loop: false in RunEngineProps.music,
 // since a looping track restarts instead of ever "ending".
@@ -174,6 +186,7 @@ export type GameEvent =
   | HoverInEvent
   | HoverOutEvent
   | MouseMoveEvent
+  | MouseLeaveEvent
   | MusicEndEvent;
 
 // Wraps whatever type you pass as RunEngineProps's Custom type parameter

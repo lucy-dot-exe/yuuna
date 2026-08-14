@@ -83,9 +83,10 @@ runEngine<GameState>({
   `CIRCLE`, `TEXT`, `SPRITE`, `ANIMATED_SPRITE`, `LINE`, and `GROUP`. Give
   one an `id` plus `isClickable`/`isHoverable` to make it interactive.
 - **Events** — `nextState` receives one `GameEvent` per call: `TIME`,
-  `CLICK`, `HOVER_IN`, `HOVER_OUT`, `MOUSE_MOVE`, `MUSIC_END`, or a
-  `CUSTOM` event of a type you define yourself, for reporting things like
-  an async `fetch()` resolving back into your state machine.
+  `CLICK`, `HOVER_IN`, `HOVER_OUT`, `MOUSE_MOVE`, `MOUSE_LEAVE`,
+  `MUSIC_END`, or a `CUSTOM` event of a type you define yourself, for
+  reporting things like an async `fetch()` resolving back into your
+  state machine.
 - **Keyboard, camera, sprites & animation, sound effects & music,
   canvas config, and mechanics pipelines** all follow the same idea:
   small, focused props and functions `runEngine`/`nextState` take, that

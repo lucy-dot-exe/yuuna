@@ -656,6 +656,28 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     }
   });
 
+  // No further mousemove fires once the mouse is off the canvas, so this
+  // is also the only chance to report a HOVER_OUT for whatever was
+  // hovered when it left — otherwise that hover would just dangle,
+  // never explicitly ended.
+  canvas.addEventListener("mouseleave", (ev) => {
+    const mouse = getCanvasPosition(ev);
+
+    const { renderables, camera } = renderState(state);
+    const worldMouse = toWorldPosition(mouse, camera);
+
+    if (hoveredId !== null) {
+      const lastHovered = renderables.find((r) => r.id === hoveredId);
+
+      if (lastHovered !== undefined) {
+        events.push({ tag: "HOVER_OUT", id: lastHovered.id, mouse, worldMouse });
+      }
+    }
+
+    hoveredId = null;
+    events.push({ tag: "MOUSE_LEAVE", mouse, worldMouse });
+  });
+
   context.imageSmoothingEnabled = false;
 
   // Scale is a canvas transform around the renderable's anchor, applied
