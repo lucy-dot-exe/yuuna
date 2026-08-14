@@ -80,149 +80,22 @@ runEngine<GameState>({
 ## Concepts
 
 - **Renderables** — declarative shapes drawn each frame: `RECTANGLE`,
-  `CIRCLE`, `TEXT`, `SPRITE`, `LINE`, `GROUP`, and `ANIMATED_SPRITE`. Give
-  one an `id` plus `isClickable` / `isHoverable` / `trackMouseMovement` to
-  make it interactive. `TEXT` also takes a `fontSize` (defaults to `30`).
-  `GROUP` draws nothing itself — it's just a `position` (plus the usual
-  `scale`/`modulate`/`layer` below) for `children` to hang off of, for
-  grouping renderables that should move/scale/tint together without
-  needing a shape of its own; it's never interactable, since it has no
-  shape to hit-test. `ANIMATED_SPRITE` is `SPRITE` with an `animation`
-  (name of one defined on that resource — see Sprites below) and an
-  optional `timeScale` instead of a `frame` number; the engine picks the
-  frame for you based on how long it's been playing. Unlike every other
-  renderable, its `id` is required — that's how the engine recognizes
-  "this is the same sprite as last frame" across renders (and switches to
-  frame 0 if `animation` changes for that `id`), so reusing an id across
-  two different entities will make their animations bleed together.
-  Every renderable also takes:
-  - `layer` — higher values render later, i.e. in front of lower ones.
-    Defaults to `0`; renderables on the same layer keep `render()`'s order.
-  - `scale` — `{ x, y }` multiplier on the renderable's size, anchored at
-    its `position` (or `from`, for `LINE`). Defaults to `{ x: 1, y: 1 }`.
-    A `CIRCLE` scaled unevenly draws (and hit-tests) as an ellipse.
-  - `modulate` — a CSS color string that multiplies the renderable's color
-    channel-by-channel, the same way Godot's `modulate` works — e.g.
-    `"#808080"` halves brightness, `"#ff0000"` keeps only the red channel.
-  - `children` — nested renderables, positioned relative to this one, like
-    Godot's parent/child nodes. A child's `position` is added to its
-    parent's (scaled by the parent's own `scale`), and `scale` / `modulate`
-    / `layer` all compose down the tree — a child's effective scale is the
-    parent's times its own, `modulate` multiplies the same way, and
-    `layer` adds (relative to the parent's, matching Godot's default: a
-    deeply-nested child can still end up drawn in front of an unrelated
-    top-level renderable if its accumulated layer says so). A child is a
-    full `Renderable`, so it can have its own `id` / `isClickable` / even
-    its own `children`. `screenSpace: true` makes a renderable (and its
-    whole subtree) ignore the camera below and stay fixed to the screen —
-    for UI/HUD that shouldn't pan or zoom with the game world.
-- **Camera** — pass `camera: (state) => ({ x, y, zoom })` to `runEngine` to
-  pan/zoom every world-space renderable (anything without
-  `screenSpace: true`) as a group, the same way a `GROUP` parent works for
-  its children — `{ x, y }` is the world position mapped to canvas
-  `(0, 0)`, and `zoom` scales everything around that same point. It's a
-  function of state, so the camera can follow something or react to a
-  zoom level you're tracking yourself.
-- **Events** — your `nextState` function receives one `GameEvent` per call:
-  `TIME` (frame tick with `delta`), `CLICK`, `HOVER_IN`, `HOVER_OUT`,
-  `MOUSE_MOVE`, or `MUSIC_END`. The mouse-carrying ones include both
-  `mouse` (raw canvas pixels — use for `screenSpace`/UI logic) and
-  `worldMouse` (that same position run through the camera's inverse
-  transform — use to place/locate world-space things, e.g. build a turret
-  where the player clicked). With no `camera` set, `worldMouse` always
-  equals `mouse`.
-- **Custom events** — `runEngine`'s second type parameter is your own
-  event payload type; give it one and `nextState`'s `event` can also be a
-  `{ tag: "CUSTOM", event: YourType }`, alongside the built-in events
-  above. `runEngine()` resolves with a `sendEvent(event)` function you
-  call from anywhere — not just from inside `nextState` — to deliver it
-  as a `CUSTOM` event on a later tick. That's the point: reporting
-  something that finished outside the normal render-loop-driven flow,
-  like a `fetch()` resolving.
+  `CIRCLE`, `TEXT`, `SPRITE`, `ANIMATED_SPRITE`, `LINE`, and `GROUP`. Give
+  one an `id` plus `isClickable`/`isHoverable` to make it interactive.
+- **Events** — `nextState` receives one `GameEvent` per call: `TIME`,
+  `CLICK`, `HOVER_IN`, `HOVER_OUT`, `MOUSE_MOVE`, `MUSIC_END`, or a
+  `CUSTOM` event of a type you define yourself, for reporting things like
+  an async `fetch()` resolving back into your state machine.
+- **Keyboard, camera, sprites & animation, sound effects & music,
+  canvas config, and mechanics pipelines** all follow the same idea:
+  small, focused props and functions `runEngine`/`nextState` take, that
+  compose with everything above instead of replacing it.
 
-  ```ts
-  type FetchEvent = { status: "done"; body: string } | { status: "failed" };
-
-  const { sendEvent } = await runEngine<GameState, FetchEvent>({
-    initialState,
-    render,
-    nextState: ({ state, event }) => {
-      if (event.tag === "CUSTOM") {
-        return event.event.status === "done"
-          ? { ...state, result: event.event.body }
-          : { ...state, result: "failed" };
-      }
-
-      return state;
-    },
-  });
-
-  fetch("/api/whatever")
-    .then((res) => res.text())
-    .then((body) => sendEvent({ status: "done", body }))
-    .catch(() => sendEvent({ status: "failed" }));
-  ```
-- **Keyboard** — `nextState` also receives a `keyboard` map keyed by
-  `KeyCode`-style keys (e.g. `"KeyW"`, `"ArrowLeft"`, `"Space"`), each with
-  `isPressed` / `isJustPressed` / `isJustReleased`.
-- **Sprites** — pass a `resources` map of `{ src, size, slices }` to
-  `runEngine` to load spritesheets, then reference them by id with a
-  `SPRITE` renderable's `resourceId` and `frame`. Set `flipX: true` to
-  mirror a sprite horizontally — useful when the art is drawn facing one
-  direction but needs to move the other way. Add an `animations` map to a
-  resource — `{ frames: number[], frameDuration, loop }` each — to play
-  one with `ANIMATED_SPRITE` instead of managing `frame` by hand.
-- **Sound effects** — pass a `sounds` map of `{ src }` to `runEngine`, then
-  call the `playSound(id)` function `nextState` receives to play one, e.g.
-  `playSound("collect")` when a cookie is clicked. Calling it again while
-  a sound is still playing overlaps a new copy instead of cutting the
-  first one off.
-- **Music** — pass a `music` map of `{ src, loop? }` to `runEngine`, then
-  use the `playMusic(id)` / `pauseMusic()` / `resumeMusic()` functions
-  `nextState` receives to control a background track. Unlike `playSound`,
-  only one track plays at a time and it keeps running in the background
-  across frames instead of firing once; `pauseMusic()` leaves it where it
-  stopped, so `resumeMusic()` (or calling `playMusic(id)` again) continues
-  it instead of starting over.
-  `setMusicVolume(volume)` (0 to 1) controls whichever track is current
-  and whatever plays next — volume isn't per-track, so switching tracks
-  with `playMusic` keeps the volume you last set instead of resetting to
-  full. `loop` defaults to `true`; set it `false` on a track to get a
-  `MUSIC_END` event (carrying that track's `id`) once it finishes instead
-  of having it restart.
-- **Canvas** — pass `canvas: { width, height, backgroundColor }` to
-  `runEngine` to size and color the canvas from code. All three are
-  optional; anything you don't set falls back to the canvas element's
-  existing HTML/CSS.
-- **Mechanics** — `nextState` can also be an array of small
-  `NextStateFunction`s instead of one big function. Each one is run in
-  order for every event, and can return:
-  - a new state, to update to
-  - `undefined` (or no `return` at all) — no change, but the rest of the
-    list still runs, so a guard can just be `if (...) return;`
-  - `STOP` (imported from `yuuna-engine`) — no change, and the rest of
-    the list is skipped for this event, so a shared rule (like "nothing
-    happens once the game is over") only needs to be written once
-
-  ```ts
-  import { runEngine, STOP, type NextStateFunction } from "yuuna-engine";
-
-  const freezeOnGameOver: NextStateFunction<GameState> = ({ state }) => {
-    if (state.lives <= 0) return STOP;
-  };
-
-  const moveEnemies: NextStateFunction<GameState> = ({ state, event }) => {
-    if (event.tag === "TIME") {
-      return { ...state, enemies: move(state.enemies, event.delta) };
-    }
-  };
-
-  runEngine<GameState>({
-    initialState,
-    render,
-    nextState: [freezeOnGameOver, moveEnemies /* ... */],
-  });
-  ```
+This README stays intentionally thin — the full concept-by-concept
+reference, with every option and example, lives on the
+[wiki](https://github.com/lucy-dot-exe/yuuna/wiki). The
+[playground](https://lucy-dot-exe.github.io/yuuna/#playground) also has a
+small, focused example for most of these you can run and edit directly.
 
 ## Development
 
