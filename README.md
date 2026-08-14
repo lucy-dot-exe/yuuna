@@ -32,14 +32,19 @@ Then describe your game as state + render + nextState:
 ```ts
 import { runEngine } from "yuuna-engine";
 
+// The shape of your game's data — whatever it takes to fully describe
+// what's on screen and how it behaves
 type GameState = { cookies: number };
 
+// What that state looks like before anything has happened yet
+const initialState: GameState = { cookies: 0 };
+
 runEngine<GameState>({
-  initialState: { cookies: 0 },
+  initialState,
 
-  // Optional — size and color the canvas from code instead of HTML/CSS
-  canvas: { width: 960, height: 540, backgroundColor: "#0d1831" },
-
+  // Given the current state, what should be drawn this frame? Called
+  // every frame — always derive the picture from state, instead of
+  // reaching for the canvas directly.
   render: (state) => ({
     renderables: [
       {
@@ -59,6 +64,9 @@ runEngine<GameState>({
     ],
   }),
 
+  // Given the current state and something that just happened, what's the
+  // next state? Called once per event (a click, a frame tick, ...) — the
+  // only place game logic lives.
   nextState: ({ state, event }) => {
     if (event.tag === "CLICK" && event.id === "cookie") {
       return { cookies: state.cookies + 1 };
