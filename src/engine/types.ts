@@ -197,6 +197,11 @@ export type NextStateProps<State> = {
   // Pauses whichever track playMusic last started, leaving its position
   // where it left off so a later playMusic() call resumes it.
   pauseMusic: () => void;
+  // Sets the volume (0 to 1) of whichever track is current, and of
+  // whatever plays next — unlike pauseMusic's position, volume isn't
+  // per-track, so switching tracks with playMusic keeps the same volume
+  // instead of resetting to full. Values outside 0-1 are clamped.
+  setMusicVolume: (volume: number) => void;
 };
 
 // Return this from a NextStateFunction to stop the rest of a nextState

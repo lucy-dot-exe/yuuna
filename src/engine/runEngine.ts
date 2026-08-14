@@ -139,6 +139,12 @@ export const runEngine: RunEngineFunction = async <State>(
   // of starting over.
   let currentMusic: HTMLAudioElement | null = null;
 
+  // Volume is a property of each HTMLAudioElement, not global — tracked
+  // separately here and (re)applied on every playMusic() so switching
+  // tracks keeps the volume the game last set instead of resetting to
+  // each element's default of 1.
+  let musicVolume = 1;
+
   const playMusic = (id: string) => {
     const audio = musicById[id];
 
@@ -151,12 +157,21 @@ export const runEngine: RunEngineFunction = async <State>(
     }
 
     audio.loop = true;
+    audio.volume = musicVolume;
     audio.play();
     currentMusic = audio;
   };
 
   const pauseMusic = () => {
     currentMusic?.pause();
+  };
+
+  const setMusicVolume = (volume: number) => {
+    musicVolume = Math.min(1, Math.max(0, volume));
+
+    if (currentMusic !== null) {
+      currentMusic.volume = musicVolume;
+    }
   };
 
   // A newer runEngine() call started while this one was still loading
@@ -724,7 +739,7 @@ export const runEngine: RunEngineFunction = async <State>(
       );
 
       for (const nextState of nextStateFns) {
-        const result = nextState({ state, event, keyboard, playSound, playMusic, pauseMusic });
+        const result = nextState({ state, event, keyboard, playSound, playMusic, pauseMusic, setMusicVolume });
 
         // STOP stops the rest of the list from running for this event,
         // instead of every later mechanic needing to repeat the same

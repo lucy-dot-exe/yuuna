@@ -143,6 +143,10 @@ runEngine<GameState>({
   plays at a time and it keeps running in the background across frames
   instead of firing once; `pauseMusic()` leaves it where it stopped, so
   calling `playMusic(id)` again resumes it instead of starting over.
+  `setMusicVolume(volume)` (0 to 1) controls whichever track is current
+  and whatever plays next — volume isn't per-track, so switching tracks
+  with `playMusic` keeps the volume you last set instead of resetting to
+  full.
 - **Canvas** — pass `canvas: { width, height, backgroundColor }` to
   `runEngine` to size and color the canvas from code. All three are
   optional; anything you don't set falls back to the canvas element's
