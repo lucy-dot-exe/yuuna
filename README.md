@@ -116,12 +116,13 @@ runEngine<GameState>({
   function of state, so the camera can follow something or react to a
   zoom level you're tracking yourself.
 - **Events** — your `nextState` function receives one `GameEvent` per call:
-  `TIME` (frame tick with `delta`), `CLICK`, `HOVER_IN`, `HOVER_OUT`, or
-  `MOUSE_MOVE`. The mouse-carrying ones include both `mouse` (raw canvas
-  pixels — use for `screenSpace`/UI logic) and `worldMouse` (that same
-  position run through the camera's inverse transform — use to
-  place/locate world-space things, e.g. build a turret where the player
-  clicked). With no `camera` set, `worldMouse` always equals `mouse`.
+  `TIME` (frame tick with `delta`), `CLICK`, `HOVER_IN`, `HOVER_OUT`,
+  `MOUSE_MOVE`, or `MUSIC_END`. The mouse-carrying ones include both
+  `mouse` (raw canvas pixels — use for `screenSpace`/UI logic) and
+  `worldMouse` (that same position run through the camera's inverse
+  transform — use to place/locate world-space things, e.g. build a turret
+  where the player clicked). With no `camera` set, `worldMouse` always
+  equals `mouse`.
 - **Keyboard** — `nextState` also receives a `keyboard` map keyed by
   `KeyCode`-style keys (e.g. `"KeyW"`, `"ArrowLeft"`, `"Space"`), each with
   `isPressed` / `isJustPressed` / `isJustReleased`.
@@ -137,16 +138,18 @@ runEngine<GameState>({
   `playSound("collect")` when a cookie is clicked. Calling it again while
   a sound is still playing overlaps a new copy instead of cutting the
   first one off.
-- **Music** — pass a `music` map of `{ src }` to `runEngine`, then use the
-  `playMusic(id)` / `pauseMusic()` functions `nextState` receives to
-  control a looping background track. Unlike `playSound`, only one track
-  plays at a time and it keeps running in the background across frames
-  instead of firing once; `pauseMusic()` leaves it where it stopped, so
-  calling `playMusic(id)` again resumes it instead of starting over.
+- **Music** — pass a `music` map of `{ src, loop? }` to `runEngine`, then
+  use the `playMusic(id)` / `pauseMusic()` functions `nextState` receives
+  to control a background track. Unlike `playSound`, only one track plays
+  at a time and it keeps running in the background across frames instead
+  of firing once; `pauseMusic()` leaves it where it stopped, so calling
+  `playMusic(id)` again resumes it instead of starting over.
   `setMusicVolume(volume)` (0 to 1) controls whichever track is current
   and whatever plays next — volume isn't per-track, so switching tracks
   with `playMusic` keeps the volume you last set instead of resetting to
-  full.
+  full. `loop` defaults to `true`; set it `false` on a track to get a
+  `MUSIC_END` event (carrying that track's `id`) once it finishes instead
+  of having it restart.
 - **Canvas** — pass `canvas: { width, height, backgroundColor }` to
   `runEngine` to size and color the canvas from code. All three are
   optional; anything you don't set falls back to the canvas element's

@@ -163,12 +163,18 @@ export type MouseMoveEvent = {
   worldMouse: { x: number; y: number };
 };
 
+// Fires when a music track (started with playMusic) reaches its end —
+// only for a track configured with loop: false in RunEngineProps.music,
+// since a looping track restarts instead of ever "ending".
+export type MusicEndEvent = { tag: "MUSIC_END"; id: string };
+
 export type GameEvent =
   | TimeEvent
   | ClickEvent
   | HoverInEvent
   | HoverOutEvent
-  | MouseMoveEvent;
+  | MouseMoveEvent
+  | MusicEndEvent;
 
 export type NextStateProps<State> = {
   state: State;
@@ -263,7 +269,17 @@ export type RunEngineProps<State> = {
   // Background music tracks, keyed by an id you pick — start/pause one
   // from a NextStateFunction with the `playMusic(id)` / `pauseMusic()`
   // props it receives.
-  music?: Record<string, { src: string }>;
+  music?: Record<
+    string,
+    {
+      src: string;
+      // Whether the track restarts on end. Defaults to true. Set false
+      // to get a MusicEndEvent instead — a looping track never reaches
+      // "ended", so that event only ever fires for a track with loop:
+      // false.
+      loop?: boolean;
+    }
+  >;
   canvas?: {
     width?: number;
     height?: number;

@@ -2,6 +2,7 @@ import { exhaust } from "../utils/exhaust";
 import { Position } from "../utils/Position";
 import { iterateRecord, iterateRecordAsync } from "../utils/iterateRecord";
 import { createRecord } from "../utils/createRecord";
+import { getKeys } from "../utils/getKeys";
 import {
   AnimatedSpriteRenderable,
   GameEvent,
@@ -76,6 +77,8 @@ export const runEngine: RunEngineFunction = async <State>(
 
   let state: State = props.initialState;
 
+  const events: GameEvent[] = [];
+
   const resources = props.resources ?? {};
   const resourceById = await iterateRecordAsync(
     resources,
@@ -133,6 +136,15 @@ export const runEngine: RunEngineFunction = async <State>(
   const music = props.music ?? {};
   const musicById = await iterateRecordAsync(music, ({ value }) => loadAudio(value.src));
 
+  // Registered once per track at load time — fires only for a track
+  // whose `loop` is false, since a looping <audio> never reaches "ended"
+  // (the browser restarts it before the event would fire).
+  for (const id of getKeys(musicById)) {
+    musicById[id].addEventListener("ended", () => {
+      events.push({ tag: "MUSIC_END", id });
+    });
+  }
+
   // Unlike sounds, music reuses the same element instead of cloning it —
   // there's only ever one track playing, and reusing it is what lets
   // pauseMusic()/playMusic() resume from where playback left off instead
@@ -156,7 +168,7 @@ export const runEngine: RunEngineFunction = async <State>(
       currentMusic.pause();
     }
 
-    audio.loop = true;
+    audio.loop = music[id]?.loop ?? true;
     audio.volume = musicVolume;
     audio.play();
     currentMusic = audio;
@@ -542,8 +554,6 @@ export const runEngine: RunEngineFunction = async <State>(
 
   let lastFrame: number = Date.now();
   let hoveredId: string | null = null;
-
-  const events: GameEvent[] = [];
 
   canvas.addEventListener("click", (ev) => {
     const mouse: Position = getCanvasPosition(ev);
