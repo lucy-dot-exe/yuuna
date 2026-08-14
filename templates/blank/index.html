@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Yuuna game</title>
+    <style>
+      body {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: #0d1831;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="yuuna"></canvas>
+
+    <script type="module">
+      // Loaded straight from a CDN build of the published npm package —
+      // no install, no build step. Pin the version so this page doesn't
+      // change under you; bump it yourself when you want a newer Yuuna.
+      import { runEngine } from "https://esm.sh/yuuna-engine@0.3.0";
+
+      // The shape of your game's data — whatever it takes to fully
+      // describe what's on screen and how it behaves
+      const initialState = { cookies: 0 };
+
+      runEngine({
+        initialState,
+
+        canvas: { width: 960, height: 540, backgroundColor: "#0d1831" },
+
+        // Given the current state, what should be drawn this frame?
+        // Called every frame — always derive the picture from state,
+        // instead of reaching for the canvas directly.
+        render: (state) => ({
+          renderables: [
+            {
+              type: "TEXT",
+              text: `${state.cookies} cookies`,
+              color: "white",
+              position: { x: 100, y: 50 },
+            },
+            {
+              type: "CIRCLE",
+              id: "cookie",
+              isClickable: true,
+              color: "brown",
+              position: { x: 50, y: 50 },
+              radius: 25,
+            },
+          ],
+        }),
+
+        // Given the current state and something that just happened,
+        // what's the next state? Called once per event (a click, a
+        // frame tick, ...) — the only place game logic lives.
+        nextState: ({ state, event }) => {
+          if (event.tag === "CLICK" && event.id === "cookie") {
+            return { cookies: state.cookies + 1 };
+          }
+
+          return state;
+        },
+      });
+    </script>
+  </body>
+</html>
