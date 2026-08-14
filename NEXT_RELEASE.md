@@ -11,3 +11,4 @@
   one instead of stopping it.
 - Added `TAB_BLUR`/`TAB_FOCUS` events, fired when the browser tab the game
   is running in is switched away from / back to.
+- Removed the Square Dash example.
