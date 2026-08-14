@@ -181,6 +181,36 @@
       .feature-card {
         height: 100%;
       }
+
+      .example-card {
+        height: 100%;
+        cursor: pointer;
+        text-align: left;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        transition: transform 0.15s ease, border-color 0.15s ease;
+      }
+      .example-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(255, 255, 255, 0.3);
+      }
+      .example-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        margin-bottom: 10px;
+      }
+      .example-icon.games {
+        background: rgba(13, 110, 253, 0.18);
+        color: #6ea8fe;
+      }
+      .example-icon.feature {
+        background: rgba(25, 135, 84, 0.18);
+        color: #75c298;
+      }
     </style>
 
     <link
@@ -239,6 +269,9 @@
           <ul class="navbar-nav">
             <li class="nav-item">
               <a class="nav-link" href="#top">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#examples">Examples</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="#playground">Playground</a>
@@ -345,6 +378,21 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <div id="examples" class="container mt-5 mb-5">
+      <h2>Examples</h2>
+      <p class="text-body-secondary">
+        Everything in <a href="https://github.com/lucy-dot-exe/yuuna/tree/main/examples" target="_blank" rel="noopener"><code>examples/</code></a> —
+        full games and small, focused snippets for one concept at a time.
+        Click one to open it in the <a href="#playground">playground</a> below.
+      </p>
+
+      <h6 class="text-uppercase text-body-secondary mt-4 mb-2" style="letter-spacing: 0.5px">Games</h6>
+      <div class="row g-3 mb-4" id="examplesGamesGrid"></div>
+
+      <h6 class="text-uppercase text-body-secondary mb-2" style="letter-spacing: 0.5px">Feature examples</h6>
+      <div class="row g-3" id="examplesFeatureGrid"></div>
     </div>
 
     <div id="playground" class="content" style="margin-inline: 10px">
@@ -577,6 +625,124 @@
         autoReload = checked;
       }
 
+      // The Examples gallery below is a second, static picker over the same
+      // examples as #exampleSelect's dropdown (see EXAMPLES) — clicking a
+      // card just has to drive the same loadProject(id) the dropdown does,
+      // once Monaco/the manifest have actually finished loading (see the
+      // require(["vs/editor/editor.main"], ...) block further down, which
+      // resolves this once its setup — including the default example — is
+      // done).
+      let resolvePlaygroundReady;
+      const playgroundReady = new Promise((resolve) => {
+        resolvePlaygroundReady = resolve;
+      });
+
+      // A gallery, Phaser-labs-style (https://labs.phaser.io), over the
+      // same examples/ the dropdown above pulls from — id has to match a
+      // dropdown <option>'s value / an id in dist/examples/manifest.json.
+      // Kept as a hardcoded list rather than generated from the manifest
+      // (which has no description/category) for the same reason the
+      // dropdown's <option>s already are: it's a handful of examples that
+      // change rarely, not worth a build step of its own.
+      const EXAMPLES = [
+        {
+          id: "cookie-clicker",
+          label: "Cookie Clicker",
+          category: "games",
+          description: "Click the cookie, watch the counter go up — the smallest possible click → state → render loop.",
+        },
+        {
+          id: "food-clicker",
+          label: "Food Clicker",
+          category: "games",
+          description: "Click food as it spawns for points — sprites, a sound effect, and a fading “+1” popup.",
+        },
+        {
+          id: "tower-defense",
+          label: "Tower Defense",
+          category: "games",
+          description: "Enemies walk down the lane in escalating waves — turrets melt anything that gets close enough.",
+        },
+        {
+          id: "shoot-em-up",
+          label: "Shoot Em Up",
+          category: "games",
+          description: "The ship follows your mouse — hold the button down to fire at enemies falling from the top.",
+        },
+        {
+          id: "camera",
+          label: "Camera",
+          category: "feature",
+          description: "Move with the arrow keys — the camera follows you around a world bigger than the canvas.",
+        },
+        {
+          id: "groups-and-layers",
+          label: "Groups & Layers",
+          category: "feature",
+          description: "A GROUP composes position/scale/modulate/layer down to its children, like Godot's parent/child nodes.",
+        },
+        {
+          id: "mechanics-pipeline",
+          label: "Mechanics Pipeline",
+          category: "feature",
+          description: "nextState as an array of small, independent functions instead of one big one, with STOP as a shared early-exit.",
+        },
+        {
+          id: "custom-events",
+          label: "Custom Events",
+          category: "feature",
+          description: "Send an HTTP request and handle it once it resolves, reported back in via sendEvent.",
+        },
+      ];
+
+      function renderExamplesGrid() {
+        const gridByCategory = {
+          games: document.getElementById("examplesGamesGrid"),
+          feature: document.getElementById("examplesFeatureGrid"),
+        };
+
+        for (const example of EXAMPLES) {
+          const col = document.createElement("div");
+          col.className = "col-md-6 col-lg-3";
+
+          const icon = example.category === "games" ? "bi-joystick" : "bi-puzzle";
+
+          col.innerHTML = `
+            <div class="card example-card bg-body-tertiary h-100" tabindex="0" role="button">
+              <div class="card-body">
+                <div class="example-icon ${example.category}"><i class="bi ${icon}"></i></div>
+                <h5 class="card-title">${example.label}</h5>
+                <p class="card-text text-body-secondary" style="font-size: 0.9rem">${example.description}</p>
+              </div>
+            </div>
+          `;
+
+          const card = col.querySelector(".example-card");
+          card.addEventListener("click", () => openExample(example.id));
+          card.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              openExample(example.id);
+            }
+          });
+
+          gridByCategory[example.category].appendChild(col);
+        }
+      }
+
+      renderExamplesGrid();
+
+      // Waits for the playground to be ready (see playgroundReady above),
+      // then loads the clicked example into it and scrolls it into view —
+      // the same effect as picking it from #exampleSelect by hand.
+      async function openExample(id) {
+        document.getElementById("exampleSelect").value = id;
+        document.getElementById("playground").scrollIntoView({ behavior: "smooth" });
+
+        await playgroundReady;
+        await loadProject(id);
+      }
+
       // Drag the handle below the editor to resize it vertically — Monaco's
       // automaticLayout (set below) picks up the container's new height on
       // its own, so there's nothing to tell the editor about the resize.
@@ -650,6 +816,7 @@
         });
 
         await loadProject(document.getElementById("exampleSelect").value);
+        resolvePlaygroundReady();
       });
 
       // Fetches every file belonging to a project (a single-file game is

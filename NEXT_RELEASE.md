@@ -16,3 +16,6 @@
   original placeholder art.
 - Added a Shoot Em Up example — the ship follows the mouse, hold the
   button down to fire at enemies falling from the top.
+- Added an Examples gallery to the landing page — a card grid over every
+  example, similar to Phaser's labs page, that opens the one you click
+  into the playground.
