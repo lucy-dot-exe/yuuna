@@ -53,10 +53,10 @@ export const EXPLOSION_FRAME_DURATION = 40; // milliseconds each animation frame
 export const EXPLOSION_DURATION = EXPLOSION_FRAME_COUNT * EXPLOSION_FRAME_DURATION;
 
 export const TERRAIN_TILE_SIZE = 16; // native pixels per tile, before scale
-export const TERRAIN_TILE_COUNT = 16;
+export const TERRAIN_TILE_COUNT = 2;
 export const TERRAIN_SCALE = 4;
 export const TERRAIN_PATH_FRAME = 0; // first frame: dirt
-export const TERRAIN_BACKGROUND_FRAME = TERRAIN_TILE_COUNT - 1; // last frame: grass
+export const TERRAIN_BACKGROUND_FRAME = 1; // second frame: grass
 
 // Enemies spawn in repeating 20s waves: each wave starts spaced out, gets
 // denser toward the middle, then spaces back out again — and every new

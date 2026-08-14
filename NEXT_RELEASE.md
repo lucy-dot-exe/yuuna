@@ -12,3 +12,5 @@
 - Added `TAB_BLUR`/`TAB_FOCUS` events, fired when the browser tab the game
   is running in is switched away from / back to.
 - Removed the Square Dash example.
+- Replaced Tower Defense's sprites (not free for distribution) with new
+  original placeholder art.
