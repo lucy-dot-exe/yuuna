@@ -14,3 +14,5 @@
 - Removed the Square Dash example.
 - Replaced Tower Defense's sprites (not free for distribution) with new
   original placeholder art.
+- Added a Shoot Em Up example — the ship follows the mouse, hold the
+  button down to fire at enemies falling from the top.
