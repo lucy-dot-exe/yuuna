@@ -48,3 +48,12 @@
 - Added a Tab Visibility example, demonstrating `TAB_BLUR`/`TAB_FOCUS` —
   pausing/resuming music as the tab loses/regains focus.
 - Added zoom in/out (E/Q) to the Camera example.
+- `dist/resources/` (example art/sound/music) is no longer committed —
+  this repo being open source doesn't make every asset in it free to
+  redistribute. `runEngine()` now falls back to a generated placeholder
+  sheet for any image resource that fails to load, and no longer hangs
+  forever on a missing sound/music file, so examples still run without
+  the real assets present — no example code needed to change.
+- Credited [Free Pixel Food!](https://henrysoftware.itch.io/pixel-food)
+  by Henry Software (the food icons in Food Clicker and Sprites) in the
+  README and in the site's footer.
