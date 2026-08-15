@@ -89,6 +89,12 @@ const EXAMPLES = [
     category: "feature",
     description: "An ANIMATED_SPRITE plays through a named animation on its own — click to pause/resume it.",
   },
+  {
+    id: "music-controls",
+    label: "Music Controls",
+    category: "feature",
+    description: "Play/pause a looping track and adjust its volume with playMusic/pauseMusic/setMusicVolume.",
+  },
 ];
 
 function renderExamplesGrid() {
