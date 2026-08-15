@@ -834,6 +834,83 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     return tintBuffer;
   };
 
+  // Palette-swapped frames, keyed by resourceId + frame + the exact swap
+  // list — unlike tintedSpriteFrame's cheap multiply-blend (redone fresh
+  // every draw off one shared buffer), a swap needs real pixel work
+  // (getImageData over the whole frame), so each unique combination is
+  // computed once here and reused on every later draw instead. Grows for
+  // as long as new combinations keep showing up — fine for a fixed small
+  // set of recolors (e.g. team A/B/C), a bad fit for one that varies
+  // continuously (e.g. a randomized hue per instance), which would cache-
+  // miss every time and just accumulate.
+  const swappedFrameCache = new Map<string, HTMLCanvasElement>();
+
+  const swappedSpriteFrame = (
+    resourceId: string,
+    frame: number,
+    image: CanvasImageSource,
+    source: { x: number; y: number; width: number; height: number },
+    swapColors: { from: string; to: string }[]
+  ): CanvasImageSource => {
+    const cacheKey = `${resourceId}:${frame}:${swapColors.map(({ from, to }) => `${from}>${to}`).join(",")}`;
+    const cached = swappedFrameCache.get(cacheKey);
+
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const canvas = window.document.createElement("canvas");
+    canvas.width = source.width;
+    canvas.height = source.height;
+
+    const swapContext = canvas.getContext("2d");
+
+    // No 2d context to work with (shouldn't happen in a real browser) —
+    // draw the untouched frame rather than crash.
+    if (swapContext === null) {
+      return image;
+    }
+
+    swapContext.drawImage(
+      image,
+      source.x,
+      source.y,
+      source.width,
+      source.height,
+      0,
+      0,
+      source.width,
+      source.height
+    );
+
+    // Resolved once per unique `from`/`to` pair (resolveColor caches by
+    // string), not per pixel — the pixel loop below only ever compares
+    // against these already-resolved bytes.
+    const resolvedSwaps = swapColors.map(({ from, to }) => ({
+      from: resolveColor(from),
+      to: resolveColor(to),
+    }));
+
+    const imageData = swapContext.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+
+    for (let i = 0; i < pixels.length; i += 4) {
+      for (const { from, to } of resolvedSwaps) {
+        if (pixels[i] === from[0] && pixels[i + 1] === from[1] && pixels[i + 2] === from[2] && pixels[i + 3] === from[3]) {
+          pixels[i] = to[0];
+          pixels[i + 1] = to[1];
+          pixels[i + 2] = to[2];
+          pixels[i + 3] = to[3];
+          break;
+        }
+      }
+    }
+
+    swapContext.putImageData(imageData, 0, 0);
+    swappedFrameCache.set(cacheKey, canvas);
+    return canvas;
+  };
+
   const intervalId = setInterval(() => {
     const now = Date.now();
     const delta = now - lastFrame;
@@ -946,7 +1023,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
       }
 
       if (renderable.type === "SPRITE") {
-        const { opacity = 1, flipX = false, modulate } = renderable;
+        const { opacity = 1, flipX = false, modulate, swapColors } = renderable;
         const resource = resourceById[renderable.resourceId];
 
         const frame = {
@@ -966,12 +1043,25 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
         const destWidth = resource.size.width;
         const destHeight = resource.size.height;
 
-        // Tinting swaps in an already-tinted offscreen copy of this frame
-        // as the image to draw — everything past this point (flipX,
-        // positioning) treats it exactly like the untinted spritesheet,
-        // just drawn starting at (0, 0) instead of cropped from a sheet.
-        const image = modulate === undefined ? resource.image : tintedSpriteFrame(resource.image, source, modulate);
-        const imageSource = modulate === undefined ? source : { x: 0, y: 0, width: source.width, height: source.height };
+        // Swapping and tinting each swap in an already-processed offscreen
+        // copy of this frame as the image to draw from then on —
+        // everything past this point (flipX, positioning) treats it
+        // exactly like the untinted spritesheet, just drawn starting at
+        // (0, 0) instead of cropped from a sheet. Swap runs first (it's
+        // the sprite's "real" recolored identity), tint runs on top of
+        // that (e.g. a damage flash still applies over swapped colors).
+        let image: CanvasImageSource = resource.image;
+        let imageSource = source;
+
+        if (swapColors !== undefined && swapColors.length > 0) {
+          image = swappedSpriteFrame(renderable.resourceId, renderable.frame, image, imageSource, swapColors);
+          imageSource = { x: 0, y: 0, width: source.width, height: source.height };
+        }
+
+        if (modulate !== undefined) {
+          image = tintedSpriteFrame(image, imageSource, modulate);
+          imageSource = { x: 0, y: 0, width: source.width, height: source.height };
+        }
 
         context.globalAlpha = opacity;
 

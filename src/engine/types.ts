@@ -69,6 +69,16 @@ export type SpriteRenderable = BaseRenderable & {
   frame: number;
   opacity?: number;
   flipX?: boolean;
+  // Palette swap — replaces every pixel exactly matching `from` with
+  // `to` (both any valid CSS color string), for recoloring a sprite
+  // (e.g. a team/faction color, a skin/outfit variant) without a
+  // separate art asset per color. Unlike `modulate`'s multiply-blend,
+  // this can change hue outright (e.g. red to blue), but only matches
+  // pixels *exactly* equal to `from` — the right tool for flat-color
+  // pixel art, not for anti-aliased/gradient art where few pixels are
+  // an exact match. Applied before `modulate`, so a modulate tint (e.g.
+  // a damage flash) still layers on top of the swapped colors.
+  swapColors?: { from: string; to: string }[];
 };
 
 export type LineRenderable = BaseRenderable & {
@@ -98,6 +108,9 @@ export type AnimatedSpriteRenderable = BaseRenderable & {
   paused?: boolean;
   opacity?: number;
   flipX?: boolean;
+  // See SpriteRenderable.swapColors — same thing, applied to whichever
+  // frame the animation is currently showing.
+  swapColors?: { from: string; to: string }[];
 
   // Required — unlike every other renderable's optional id. render()
   // returns brand-new objects every frame, so the engine has no way to
