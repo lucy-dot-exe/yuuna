@@ -401,7 +401,15 @@
       <div class="row g-3" id="examplesFeatureGrid"></div>
     </div>
 
-    <div id="playground" class="content" style="margin-inline: 10px">
+    <!--
+      container-fluid instead of .container (used everywhere else on the
+      page) — full viewport width, but with the exact same side padding
+      .container itself uses (Bootstrap's default 0.75rem gutter on both),
+      so the editor/canvas below still line up with the hero/examples/
+      templates sections' edges instead of hugging the browser edge on
+      their own, smaller margin.
+    -->
+    <div id="playground" class="container-fluid">
       <div class="container">
         <h2>Try it live</h2>
         <p class="text-body-secondary">
