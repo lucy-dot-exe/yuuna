@@ -33,3 +33,18 @@
 - Reworked the playground's layout: the game canvas now sits above the
   editor (full width each) instead of the two side by side, and the
   editor's default height is shorter to match.
+- Fixed the playground not respecting the page's side padding — it now
+  uses the same gutter every other section on the page does, instead of
+  a smaller, unrelated margin of its own.
+- Added a `.gitignore` to the `npm` template, covering `node_modules/`
+  and Vite's `dist/` build output.
+- Added a Sprites example — loads a spritesheet and renders one frame
+  from it, click to step through the sheet.
+- Added an Animated Sprites example — an `ANIMATED_SPRITE` playing
+  through a named animation on its own, click to pause/resume it.
+- Added a Music Controls example — play/pause a looping track and adjust
+  its volume with `playMusic`/`pauseMusic`/`setMusicVolume`.
+- Added a Mouse Leave example, demonstrating `MOUSE_LEAVE`.
+- Added a Tab Visibility example, demonstrating `TAB_BLUR`/`TAB_FOCUS` —
+  pausing/resuming music as the tab loses/regains focus.
+- Added zoom in/out (E/Q) to the Camera example.
