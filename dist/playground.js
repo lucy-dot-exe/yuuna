@@ -101,6 +101,12 @@ const EXAMPLES = [
     category: "feature",
     description: "MOUSE_LEAVE fires when the mouse exits the canvas entirely, with a HOVER_OUT alongside it.",
   },
+  {
+    id: "tab-visibility",
+    label: "Tab Visibility",
+    category: "feature",
+    description: "TAB_BLUR/TAB_FOCUS fire when the browser tab is switched away from/back to — pausing music on blur is the canonical use.",
+  },
 ];
 
 function renderExamplesGrid() {
