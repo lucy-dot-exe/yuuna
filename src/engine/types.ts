@@ -270,7 +270,10 @@ export type NextStateFunction<State, Custom = never> = (
 export type RunEngineProps<State, Custom = never> = {
   initialState: State;
   render: (state: State) => {
-    cursor?: "default" | "pointer";
+    // "none" hides the OS cursor over the canvas entirely — for a game
+    // that draws its own cursor stand-in (e.g. a ship that follows the
+    // mouse), so the two don't render on top of each other.
+    cursor?: "default" | "pointer" | "none";
     renderables: Renderable[];
   };
   // A single function, or a list of (state) => state mechanics run in

@@ -57,7 +57,7 @@ const distance = (a: { x: number; y: number }, b: { x: number; y: number }) => {
 };
 
 // Create a function that renders the game, based on the state
-type RenderFunction = (state: GameState) => { renderables: Renderable[] };
+type RenderFunction = (state: GameState) => { cursor?: "none"; renderables: Renderable[] };
 const render: RenderFunction = (state) => {
   const renderables: Renderable[] = [
     // Covers the whole canvas so MOUSE_MOVE keeps reporting the cursor's
@@ -124,7 +124,11 @@ const render: RenderFunction = (state) => {
     });
   }
 
-  return { renderables };
+  // The ship already stands in for the pointer, so the OS cursor is just
+  // a second one drawn on top of it — hidden the same way the arena
+  // RECTANGLE above tracks the mouse, as a property of what render()
+  // returns rather than something reached for via the DOM.
+  return { cursor: "none", renderables };
 };
 
 // Each mechanic below only handles the one thing its name says — see
