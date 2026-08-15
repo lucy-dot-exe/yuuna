@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Yuuna — a lightweight TypeScript game engine for quick prototypes</title>
+    <title>Yuuna — Examples</title>
     <link rel="icon" type="image/png" href="./resources/yuuna.png" />
     <style>
       html {
@@ -166,21 +166,6 @@
         -webkit-tap-highlight-color: rgba(255, 255, 255, 0); /* mobile webkit */
       }
 
-      .hero {
-        padding: 72px 0 56px;
-        text-align: center;
-      }
-
-      .install-snippet {
-        display: inline-block;
-        font-family: "Courier New", monospace;
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 6px;
-        padding: 10px 18px;
-        margin: 20px 0;
-      }
-
       .feature-card {
         height: 100%;
       }
@@ -246,7 +231,7 @@
       <nav class="container">
         <a
           class="navbar-brand d-flex align-items-center gap-2"
-          href="#top"
+          href="index.html#top"
         >
           <img
             src="./resources/yuuna.png"
@@ -271,19 +256,19 @@
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav">
             <li class="nav-item">
-              <a class="nav-link" href="#top">Home</a>
+              <a class="nav-link" href="index.html#top">Home</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#examples">Examples</a>
+              <a class="nav-link" href="index.html#examples">Examples</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="examples.html">All Examples</a>
+              <a class="nav-link active" href="examples.html">All Examples</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="#playground">Playground</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#templates">Templates</a>
+              <a class="nav-link" href="index.html#templates">Templates</a>
             </li>
             <li class="nav-item">
               <a
@@ -308,93 +293,24 @@
       </nav>
     </header>
 
-    <div id="top" class="hero">
-      <div class="container">
-        <img
-          src="./resources/yuuna.png"
-          alt="Yuuna"
-          width="120"
-          height="120"
-          style="border-radius: 50%; object-fit: cover"
-        />
-        <h1 class="display-4 mt-3">Yuuna</h1>
-        <p class="lead">
-          A lightweight TypeScript game engine for quick prototypes.
-        </p>
-        <p class="text-body-secondary" style="max-width: 640px; margin: 0 auto">
-          Drop it into a page and it's running — no editor, no build step.
-          Describe your game as a <code>state</code>, a
-          <code>render(state)</code> function, and a
-          <code>nextState({ state, event, keyboard })</code> function, and
-          Yuuna owns the render loop, input handling, and canvas drawing.
-          Scratch paper for game ideas, not a replacement for Godot or Unity.
-        </p>
-
-        <div class="install-snippet">
-          <code>npm install yuuna-engine</code>
-        </div>
-
-        <div class="d-flex gap-2 justify-content-center flex-wrap mt-3">
-          <a href="#playground" class="btn btn-light">Try it below</a>
-          <a
-            href="https://github.com/lucy-dot-exe/yuuna"
-            target="_blank"
-            rel="noopener"
-            class="btn btn-outline-light"
-            >View on GitHub</a
-          >
-        </div>
-      </div>
-    </div>
-
-    <div class="container mb-5">
-      <div class="row g-3">
-        <div class="col-md-4">
-          <div class="card feature-card bg-body-tertiary">
-            <div class="card-body">
-              <h5 class="card-title">Small, on purpose</h5>
-              <p class="card-text text-body-secondary">
-                Just a render loop and a state machine for canvas games —
-                light enough to go from idea to playable in minutes.
-              </p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card feature-card bg-body-tertiary">
-            <div class="card-body">
-              <h5 class="card-title">One state machine</h5>
-              <p class="card-text text-body-secondary">
-                Clicks, hovers, mouse movement, and frame ticks all flow
-                through a single <code>nextState</code> function.
-              </p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card feature-card bg-body-tertiary">
-            <div class="card-body">
-              <h5 class="card-title">Runs in the browser</h5>
-              <p class="card-text text-body-secondary">
-                No build step required — drop the browser bundle in a
-                <code>&lt;script&gt;</code> tag and start prototyping, like
-                the playground below.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="examples" class="container mt-5 mb-5">
-      <h2>Examples</h2>
-      <p class="text-body-secondary">
-        Everything in <a href="https://github.com/lucy-dot-exe/yuuna/tree/main/examples" target="_blank" rel="noopener"><code>examples/</code></a> —
-        full games and small, focused snippets for one concept at a time.
-        Click one to open it in the <a href="#playground">playground</a> below.
+    <div id="top" class="container mt-5 mb-4 text-center">
+      <h1 class="display-5">Examples</h1>
+      <p class="text-body-secondary" style="max-width: 640px; margin: 0 auto">
+        Every example in
+        <a
+          href="https://github.com/lucy-dot-exe/yuuna/tree/main/examples"
+          target="_blank"
+          rel="noopener"
+          ><code>examples/</code></a
+        >
+        — full games and small, focused snippets for one concept at a time.
+        Click one to open it in the <a href="#playground">playground</a>
+        below.
       </p>
+    </div>
 
-      <h6 class="text-uppercase text-body-secondary mt-4 mb-2" style="letter-spacing: 0.5px">Games</h6>
+    <div id="examples" class="container mt-3 mb-5">
+      <h6 class="text-uppercase text-body-secondary mb-2" style="letter-spacing: 0.5px">Games</h6>
       <div class="row g-3 mb-4" id="examplesGamesGrid"></div>
 
       <h6 class="text-uppercase text-body-secondary mb-2" style="letter-spacing: 0.5px">Feature examples</h6>
@@ -406,7 +322,7 @@
         <h2>Try it live</h2>
         <p class="text-body-secondary">
           Edit the TypeScript below — the canvas above runs it as you type.
-          Pick a full game from <strong>Games</strong> below, or a small,
+          Pick a full game from <strong>Games</strong> above, or a small,
           focused snippet for one concept at a time from
           <strong>Feature examples</strong>.
         </p>
@@ -509,64 +425,6 @@
           </div>
         </div>
       </div>
-    </div>
-
-    <div id="templates" class="container mt-5 mb-5">
-      <h2>Templates</h2>
-      <p class="text-body-secondary">
-        Prefer a working starting point over typing the quick start out by
-        hand? Copy one of these with
-        <a
-          href="https://github.com/Rich-Harris/degit"
-          target="_blank"
-          rel="noopener"
-          >degit</a
-        >
-        — it copies the folder without cloning the whole engine repo:
-      </p>
-
-      <div class="row g-3 mb-3">
-        <div class="col-md-6">
-          <div class="card feature-card bg-body-tertiary">
-            <div class="card-body">
-              <h5 class="card-title">blank</h5>
-              <p class="card-text text-body-secondary">
-                A single <code>index.html</code>, zero install — open it in a
-                browser and it runs.
-              </p>
-              <div class="install-snippet" style="display: block; margin: 0">
-                npx degit lucy-dot-exe/yuuna/templates/blank my-game
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-6">
-          <div class="card feature-card bg-body-tertiary">
-            <div class="card-body">
-              <h5 class="card-title">npm</h5>
-              <p class="card-text text-body-secondary">
-                TypeScript + a dev server with hot reload (via Vite), for a
-                real local project.
-              </p>
-              <div class="install-snippet" style="display: block; margin: 0">
-                npx degit lucy-dot-exe/yuuna/templates/npm my-game
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <p class="text-body-secondary">
-        Each template's own README (in the folder above) has more on running
-        it once copied — see the
-        <a
-          href="https://github.com/lucy-dot-exe/yuuna/tree/main/templates"
-          target="_blank"
-          rel="noopener"
-          >templates directory</a
-        >
-        on GitHub.
-      </p>
     </div>
 
     <footer class="text-center text-body-secondary py-4 mt-4">
