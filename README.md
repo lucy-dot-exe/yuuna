@@ -129,6 +129,24 @@ yarn watch   # rebuild on change
 browser via a global `Yuuna` object and embeds a live Monaco editor so
 visitors can edit and run a game directly on the page.
 
+## Assets
+
+The examples' art/sound/music lives in `dist/resources/`, gitignored
+rather than committed — this repo being open source doesn't make every
+asset in it free to redistribute. `runEngine()` falls back to a
+generated placeholder for any image that isn't there (and simply plays
+nothing for missing audio) instead of failing, so the examples still
+run without them — just with placeholder art in place of the real
+thing. Drop the real files in locally (or restore them from wherever
+you got this repo from) to see them for real.
+
+Currently used:
+
+- **[Free Pixel Food!](https://henrysoftware.itch.io/pixel-food)** by
+  [Henry Software](https://henrysoftware.itch.io/) — the food icons in
+  the Food Clicker and Sprites examples. CC0; credited here by choice,
+  not requirement.
+
 ## License
 
 MIT © [lucy-dot-exe](https://github.com/lucy-dot-exe)
