@@ -22,7 +22,10 @@
       .playground-shell {
         display: flex;
         width: 100%;
-        height: 800px;
+        /* Shorter than the old side-by-side layout's 800px — the editor
+           no longer has to match the game canvas's height to look
+           balanced next to it now that it's stacked below instead. */
+        height: 420px;
         min-height: 200px;
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 6px 6px 0 0;
@@ -399,146 +402,107 @@
       <div class="container">
         <h2>Try it live</h2>
         <p class="text-body-secondary">
-          Edit the TypeScript on the left — the canvas on the right runs it
-          as you type. Pick a full game from <strong>Games</strong> below,
-          or a small, focused snippet for one concept at a time from
+          Edit the TypeScript below — the canvas above runs it as you type.
+          Pick a full game from <strong>Games</strong> below, or a small,
+          focused snippet for one concept at a time from
           <strong>Feature examples</strong>.
         </p>
       </div>
-      <div class="h-100 g-2 mt-1 row" style="flex-wrap: wrap-reverse">
-        <div class="col-md">
+      <!--
+        Preview on top, editor below — stacked instead of side-by-side so
+        each gets the full width of the viewport (minus #playground's own
+        margin-inline) rather than splitting it in half. The editor's
+        height is capped low (see .playground-shell) since it no longer
+        has to match the game canvas's height to look balanced next to it.
+      -->
+      <div class="d-flex flex-column gap-3 mt-1">
+        <div>
           <div
             style="
               display: flex;
-              flex-direction: column;
+              flex-direction: row;
               align-items: stretch;
               width: 100%;
-              height: 100%;
+              margin-bottom: 6px;
             "
           >
-            <div style="flex: 1 1 0%">
-              <div
-                style="
-                  display: flex;
-                  flex-direction: column;
-                  align-items: stretch;
-                  width: 100%;
-                  height: 100%;
-                "
-              >
-                <div
-                  style="
-                    display: flex;
-                    flex-direction: row;
-                    align-items: stretch;
-                    width: 100%;
-                    margin-bottom: 6px;
-                  "
+            <div style="margin: 5px 10px">Preview:</div>
+            <div
+              class="d-flex gap-2 align-items-center"
+              style="margin-left: auto"
+            >
+              <div class="text-nowrap form-check">
+                <input
+                  type="checkbox"
+                  class="form-check-input"
+                  checked=""
+                  onchange="onAutoReloadToggle(event.target.checked)"
+                /><label title="" class="form-check-label"
+                  >Auto-Reload</label
                 >
-                  <div style="margin: 5px 10px">Editor:</div>
-                  <div class="hstack" style="margin-left: auto">
-                    <select
-                      id="exampleSelect"
-                      class="form-select form-select-sm"
-                      onchange="loadProject(this.value)"
-                    >
-                      <optgroup label="Games">
-                        <option value="cookie-clicker" selected>
-                          Cookie Clicker
-                        </option>
-                        <option value="food-clicker">Food Clicker</option>
-                        <option value="tower-defense">Tower Defense</option>
-                        <option value="shoot-em-up">Shoot Em Up</option>
-                      </optgroup>
-                      <optgroup label="Feature examples">
-                        <option value="camera">Camera</option>
-                        <option value="groups-and-layers">Groups &amp; Layers</option>
-                        <option value="mechanics-pipeline">Mechanics Pipeline</option>
-                        <option value="custom-events">Custom Events</option>
-                      </optgroup>
-                    </select>
-                  </div>
-                </div>
-                <div style="flex: 1 1 0%">
-                  <div class="playground-shell" id="playgroundShell">
-                    <div class="file-sidebar" id="fileSidebar"></div>
-                    <div class="editor-main">
-                      <div class="tab-bar" id="tabBar"></div>
-                      <div id="editorContainer"></div>
-                    </div>
-                  </div>
-                  <div class="resize-handle" id="resizeHandle" title="Drag to resize the editor">
-                    <div class="grip"></div>
-                  </div>
-                </div>
               </div>
+              <button
+                type="button"
+                id="autoreload-button"
+                class="btn settings bi-arrow-clockwise btn-dark"
+                style="font-size: 20px; padding: 0px 4px"
+                onclick="updatePreview()"
+              ></button>
             </div>
           </div>
+
+          <canvas
+            id="yuuna"
+            width="960"
+            height="800"
+            style="max-width: 100%; height: auto; display: block; margin: 0 auto"
+          ></canvas>
         </div>
-        <div class="col-md">
+
+        <div>
           <div
             style="
               display: flex;
-              flex-direction: column;
+              flex-direction: row;
               align-items: stretch;
               width: 100%;
-              height: 100%;
+              margin-bottom: 6px;
             "
           >
-            <div style="flex: 1 1 0%">
-              <div
-                style="
-                  display: flex;
-                  flex-direction: column;
-                  align-items: stretch;
-                  width: 100%;
-                  height: 100%;
-                "
+            <div style="margin: 5px 10px">Editor:</div>
+            <div class="hstack" style="margin-left: auto">
+              <select
+                id="exampleSelect"
+                class="form-select form-select-sm"
+                onchange="loadProject(this.value)"
               >
-                <div
-                  style="
-                    display: flex;
-                    flex-direction: row;
-                    align-items: stretch;
-                    width: 100%;
-                    margin-bottom: 6px;
-                  "
-                >
-                  <div style="margin: 5px 10px">Preview:</div>
-                  <div
-                    class="d-flex gap-2 align-items-center"
-                    style="margin-left: auto"
-                  >
-                    <div class="text-nowrap form-check">
-                      <input
-                        type="checkbox"
-                        class="form-check-input"
-                        checked=""
-                        onchange="onAutoReloadToggle(event.target.checked)"
-                      /><label title="" class="form-check-label"
-                        >Auto-Reload</label
-                      >
-                    </div>
-                    <button
-                      type="button"
-                      id="autoreload-button"
-                      class="btn settings bi-arrow-clockwise btn-dark"
-                      style="font-size: 20px; padding: 0px 4px"
-                      onclick="updatePreview()"
-                    ></button>
-                  </div>
-                </div>
-
-                <div style="flex: 1 1 0%">
-                  <canvas
-                    id="yuuna"
-                    width="960"
-                    height="800"
-                    style="max-width: 100%; height: auto"
-                  ></canvas>
-                </div>
-              </div>
+                <optgroup label="Games">
+                  <option value="cookie-clicker" selected>
+                    Cookie Clicker
+                  </option>
+                  <option value="food-clicker">Food Clicker</option>
+                  <option value="tower-defense">Tower Defense</option>
+                  <option value="shoot-em-up">Shoot Em Up</option>
+                </optgroup>
+                <optgroup label="Feature examples">
+                  <option value="camera">Camera</option>
+                  <option value="groups-and-layers">Groups &amp; Layers</option>
+                  <option value="mechanics-pipeline">Mechanics Pipeline</option>
+                  <option value="custom-events">Custom Events</option>
+                </optgroup>
+              </select>
             </div>
+          </div>
+
+          <div class="playground-shell" id="playgroundShell">
+            <div class="file-sidebar" id="fileSidebar"></div>
+            <div class="editor-main">
+              <div class="tab-bar" id="tabBar"></div>
+              <div id="editorContainer"></div>
+            </div>
+          </div>
+          <div class="resize-handle" id="resizeHandle" title="Drag to resize the editor">
+            <div class="grip"></div>
           </div>
         </div>
       </div>
