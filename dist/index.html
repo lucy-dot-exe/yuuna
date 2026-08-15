@@ -25,8 +25,8 @@
         /* Shorter than the old side-by-side layout's 800px — the editor
            no longer has to match the game canvas's height to look
            balanced next to it now that it's stacked below instead. */
-        height: 420px;
-        min-height: 200px;
+        height: 600px;
+        min-height: 600px;
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 6px 6px 0 0;
         overflow: hidden;
@@ -319,7 +319,7 @@
         />
         <h1 class="display-4 mt-3">Yuuna</h1>
         <p class="lead">
-          A lightweight TypeScript game engine for quick prototypes.
+          A lightweight TypeScript game engine.
         </p>
         <p class="text-body-secondary" style="max-width: 640px; margin: 0 auto">
           Drop it into a page and it's running — no editor, no build step.
@@ -327,7 +327,6 @@
           <code>render(state)</code> function, and a
           <code>nextState({ state, event, keyboard })</code> function, and
           Yuuna owns the render loop, input handling, and canvas drawing.
-          Scratch paper for game ideas, not a replacement for Godot or Unity.
         </p>
 
         <div class="install-snippet">
@@ -426,7 +425,7 @@
         height is capped low (see .playground-shell) since it no longer
         has to match the game canvas's height to look balanced next to it.
       -->
-      <div class="d-flex flex-column gap-3 mt-1">
+      <div class="container d-flex flex-column gap-3 mt-1">
         <div>
           <div
             style="
