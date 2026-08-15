@@ -57,3 +57,8 @@
 - Credited [Free Pixel Food!](https://henrysoftware.itch.io/pixel-food)
   by Henry Software (the food icons in Food Clicker and Sprites) in the
   README and in the site's footer.
+- Added palette swap to SPRITE/ANIMATED_SPRITE: `swapColors: [{ from,
+  to }]` replaces every pixel exactly matching `from` with `to` —
+  recolor a sprite off one shared sheet instead of a separate art asset
+  per color variant. Composes with the existing `modulate` tint, which
+  still applies on top of the swap.
