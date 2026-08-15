@@ -568,7 +568,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   let lastFrame: number = Date.now();
   let hoveredId: string | null = null;
 
-  canvas.addEventListener("click", (ev) => {
+  const handleClick = (ev: MouseEvent) => {
     const mouse: Position = getCanvasPosition(ev);
 
     if (hoveredId === null) return;
@@ -580,7 +580,9 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     if (hovered !== undefined && hovered.isClickable) {
       events.push({ tag: "CLICK", id: hovered.id, mouse, worldMouse: toWorldPosition(mouse, camera) });
     }
-  });
+  };
+
+  canvas.addEventListener("click", handleClick);
 
   const initialState: { keyboardState: KeyboardState } = {
     keyboardState: createRecord(keyboardKeys, () => false),
@@ -594,7 +596,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     keyboardState: { ...initialState.keyboardState },
   };
 
-  canvas.addEventListener("keydown", (event) => {
+  const handleKeyDown = (event: KeyboardEvent) => {
     const pressedKey = keyboardKeys.find((key) => key === event.code);
 
     if (pressedKey !== undefined) {
@@ -604,18 +606,22 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
       event.preventDefault();
       currentState.keyboardState[pressedKey] = true;
     }
-  });
+  };
 
-  canvas.addEventListener("keyup", (event) => {
+  canvas.addEventListener("keydown", handleKeyDown);
+
+  const handleKeyUp = (event: KeyboardEvent) => {
     const releasedKey = keyboardKeys.find((key) => key === event.code);
 
     if (releasedKey !== undefined) {
       event.preventDefault();
       currentState.keyboardState[releasedKey] = false;
     }
-  });
+  };
 
-  canvas.addEventListener("mousemove", (ev) => {
+  canvas.addEventListener("keyup", handleKeyUp);
+
+  const handleMouseMoveHover = (ev: MouseEvent) => {
     const mouse = getCanvasPosition(ev);
 
     const { renderables, camera } = renderState(state);
@@ -638,9 +644,11 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     }
 
     hoveredId = hovered === undefined ? null : hovered.id ?? null;
-  });
+  };
 
-  canvas.addEventListener("mousemove", (ev) => {
+  canvas.addEventListener("mousemove", handleMouseMoveHover);
+
+  const handleMouseMoveTracking = (ev: MouseEvent) => {
     const mouse = getCanvasPosition(ev);
 
     if (hoveredId === null) {
@@ -654,13 +662,15 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     if (hovered !== undefined && hovered.trackMouseMovement) {
       events.push({ tag: "MOUSE_MOVE", mouse, worldMouse: toWorldPosition(mouse, camera), id: hovered.id });
     }
-  });
+  };
+
+  canvas.addEventListener("mousemove", handleMouseMoveTracking);
 
   // No further mousemove fires once the mouse is off the canvas, so this
   // is also the only chance to report a HOVER_OUT for whatever was
   // hovered when it left — otherwise that hover would just dangle,
   // never explicitly ended.
-  canvas.addEventListener("mouseleave", (ev) => {
+  const handleMouseLeave = (ev: MouseEvent) => {
     const mouse = getCanvasPosition(ev);
 
     const { renderables, camera } = renderState(state);
@@ -676,7 +686,9 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
     hoveredId = null;
     events.push({ tag: "MOUSE_LEAVE", mouse, worldMouse });
-  });
+  };
+
+  canvas.addEventListener("mouseleave", handleMouseLeave);
 
   // Tab switches are a document-level concern (visibilitychange), not
   // something that ever reaches the canvas itself the way mouse/keyboard
@@ -991,10 +1003,27 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     currentMusic?.pause();
     currentMusic = null;
 
-    // Unlike the canvas's own listeners (thrown away with the canvas
-    // element itself, if it ever is), this is on `document` — it outlives
-    // this run and has to be removed explicitly, or the next run's
-    // handler stacks alongside it instead of replacing it.
+    // The canvas element itself is only thrown away between runs if the
+    // caller replaces it — in the playground it's the same persistent
+    // <canvas id="yuuna"> across every example switch and every
+    // Auto-Reload keystroke, so its listeners have to be removed
+    // explicitly here too, or each run stacks its own click/mousemove/
+    // keyboard handlers on top of every previous run's. Those old
+    // handlers still fire (each still does its own hit-testing and
+    // renderState() call against its own now-frozen state) even though
+    // their interval is long since cleared, quietly costing more CPU per
+    // click/mousemove the more times a run's been replaced — and on a
+    // slow enough device or long enough playground session, that pile-up
+    // is what "clicks stop working" actually looks like.
+    canvas.removeEventListener("click", handleClick);
+    canvas.removeEventListener("keydown", handleKeyDown);
+    canvas.removeEventListener("keyup", handleKeyUp);
+    canvas.removeEventListener("mousemove", handleMouseMoveHover);
+    canvas.removeEventListener("mousemove", handleMouseMoveTracking);
+    canvas.removeEventListener("mouseleave", handleMouseLeave);
+
+    // This one's on `document`, not the canvas — same reasoning as above,
+    // just doubly true since `document` isn't even scoped to this canvas.
     window.document.removeEventListener("visibilitychange", handleVisibilityChange);
   };
 
