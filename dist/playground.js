@@ -95,6 +95,12 @@ const EXAMPLES = [
     category: "feature",
     description: "Play/pause a looping track and adjust its volume with playMusic/pauseMusic/setMusicVolume.",
   },
+  {
+    id: "mouse-leave",
+    label: "Mouse Leave",
+    category: "feature",
+    description: "MOUSE_LEAVE fires when the mouse exits the canvas entirely, with a HOVER_OUT alongside it.",
+  },
 ];
 
 function renderExamplesGrid() {
