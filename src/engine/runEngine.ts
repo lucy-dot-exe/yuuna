@@ -37,6 +37,41 @@ const anchorOf = (renderable: Renderable): Position =>
 // No RunEngineProps.camera set is the same as one that doesn't pan or zoom.
 const DEFAULT_CAMERA = { x: 0, y: 0, zoom: 1 };
 
+// Stands in for a resources[id].src image that fails to load — most
+// often because it's a real, not-necessarily-open-source asset that
+// (correctly) isn't checked into a public repo, rather than a bug. Drawn
+// at the sheet's *declared* size (resources[id].size, not anything read
+// off the failed image), so every existing frame/slice/animation still
+// lines up exactly as if the real sheet had loaded — nothing about the
+// example's own code has to know or care that this happened.
+const createPlaceholderSheet = (size: { width: number; height: number }): HTMLCanvasElement => {
+  const canvas = window.document.createElement("canvas");
+  canvas.width = Math.max(1, size.width);
+  canvas.height = Math.max(1, size.height);
+
+  const context = canvas.getContext("2d");
+
+  if (context === null) {
+    return canvas;
+  }
+
+  // The old "missing texture" magenta/black checkerboard — deliberately
+  // eye-catching (rather than, say, a plain gray box) so a placeholder
+  // reads as "an asset is missing" at a glance instead of quietly
+  // passing for a real, if plain, sprite.
+  const cellSize = Math.max(4, Math.min(16, Math.round(Math.min(canvas.width, canvas.height) / 4)));
+
+  for (let y = 0; y < canvas.height; y += cellSize) {
+    for (let x = 0; x < canvas.width; x += cellSize) {
+      const isEvenCell = (x / cellSize + y / cellSize) % 2 === 0;
+      context.fillStyle = isEvenCell ? "#ff00ff" : "#000000";
+      context.fillRect(x, y, cellSize, cellSize);
+    }
+  }
+
+  return canvas;
+};
+
 export const runEngine: RunEngineFunction = async <State, Custom = never>(
   props: RunEngineProps<State, Custom>
 ) => {
@@ -93,18 +128,16 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     resources,
     async ({ value }) =>
       new Promise<{
-        image: HTMLImageElement;
+        image: CanvasImageSource;
         size: { width: number; height: number };
         slices: { horizontal: number; vertical: number };
         animations: Record<string, { frames: number[]; frameDuration: number; loop: boolean }>;
       }>((resolve) => {
         const image = new Image();
 
-        image.src = value.src;
-
-        image.onload = function () {
+        const settle = (loadedImage: CanvasImageSource) => {
           resolve({
-            image,
+            image: loadedImage,
             size: {
               width: value.size.width / value.slices.horizontal,
               height: value.size.height / value.slices.vertical,
@@ -113,6 +146,14 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
             animations: value.animations ?? {},
           });
         };
+
+        image.src = value.src;
+        image.onload = () => settle(image);
+        // Missing/failed-to-load asset (see .gitignore's dist/resources/
+        // note) — a placeholder sheet, sized to match what this resource
+        // declared, keeps every frame/slice/animation index the example
+        // already computes valid instead of drawing nothing or throwing.
+        image.onerror = () => settle(createPlaceholderSheet(value.size));
       })
   );
 
@@ -123,6 +164,12 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
       audio.oncanplaythrough = function () {
         resolve(audio);
       };
+      // Missing/failed-to-load audio — resolve anyway instead of hanging
+      // this Promise (and every resource after it, via Promise.all)
+      // forever waiting for a "canplaythrough" that's never coming.
+      // playSound/playMusic below already no-op safely on an element
+      // that can't actually play.
+      audio.onerror = () => resolve(audio);
     });
 
   const sounds = props.sounds ?? {};
@@ -139,7 +186,10 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     }
 
     const instance = audio.cloneNode() as HTMLAudioElement;
-    instance.play();
+    // A missing/failed-to-load sound (see loadAudio's onerror above)
+    // rejects here instead of playing — caught and dropped rather than
+    // left as an unhandled rejection, same as playMusic/resumeMusic below.
+    instance.play().catch(() => {});
   };
 
   const music = props.music ?? {};
@@ -179,7 +229,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
     audio.loop = music[id]?.loop ?? true;
     audio.volume = musicVolume;
-    audio.play();
+    audio.play().catch(() => {});
     currentMusic = audio;
   };
 
@@ -188,7 +238,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   };
 
   const resumeMusic = () => {
-    currentMusic?.play();
+    currentMusic?.play().catch(() => {});
   };
 
   const setMusicVolume = (volume: number) => {
@@ -740,7 +790,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   // to lose — only the finished, correctly-masked result ever reaches
   // the main canvas, via a normal (source-over) drawImage.
   const tintedSpriteFrame = (
-    image: HTMLImageElement,
+    image: CanvasImageSource,
     source: { x: number; y: number; width: number; height: number },
     modulate: string
   ): CanvasImageSource => {
