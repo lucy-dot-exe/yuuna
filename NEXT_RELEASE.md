@@ -62,3 +62,5 @@
   recolor a sprite off one shared sheet instead of a separate art asset
   per color variant. Composes with the existing `modulate` tint, which
   still applies on top of the swap.
+- Added a Palette Swap example — four skeletons, one shared spritesheet,
+  each recolored with a different swapColors pair.
