@@ -19,3 +19,17 @@
 - Added an Examples gallery to the landing page — a card grid over every
   example, similar to Phaser's labs page, that opens the one you click
   into the playground.
+- Added a dedicated Examples page (`examples.html`, linked from the nav as
+  "All Examples") with the same gallery and playground as the landing
+  page's, on its own tab instead of scrolled to within it.
+- Fixed clicks (and other input) silently stopping in the playground the
+  longer a session went on — `runEngine()`'s click/keyboard/mouse
+  listeners were piling up on the persistent playground canvas across
+  every example switch and Auto-Reload edit instead of the old run's
+  being cleaned up first.
+- Shoot Em Up now hides the OS cursor over the canvas, since the ship
+  already stands in for it. `render()` can return `cursor: "none"` for
+  any game that wants the same.
+- Reworked the playground's layout: the game canvas now sits above the
+  editor (full width each) instead of the two side by side, and the
+  editor's default height is shorter to match.
