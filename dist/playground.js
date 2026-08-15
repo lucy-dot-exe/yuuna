@@ -83,6 +83,12 @@ const EXAMPLES = [
     category: "feature",
     description: "Load a spritesheet and render one frame from it — click to step through the sheet.",
   },
+  {
+    id: "animated-sprites",
+    label: "Animated Sprites",
+    category: "feature",
+    description: "An ANIMATED_SPRITE plays through a named animation on its own — click to pause/resume it.",
+  },
 ];
 
 function renderExamplesGrid() {
