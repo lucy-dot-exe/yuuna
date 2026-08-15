@@ -107,6 +107,12 @@ const EXAMPLES = [
     category: "feature",
     description: "TAB_BLUR/TAB_FOCUS fire when the browser tab is switched away from/back to — pausing music on blur is the canonical use.",
   },
+  {
+    id: "palette-swap",
+    label: "Palette Swap",
+    category: "feature",
+    description: "One spritesheet, recolored into several variants with swapColors instead of a separate art asset per color.",
+  },
 ];
 
 function renderExamplesGrid() {
