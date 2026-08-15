@@ -57,7 +57,7 @@ const EXAMPLES = [
     id: "camera",
     label: "Camera",
     category: "feature",
-    description: "Move with the arrow keys — the camera follows you around a world bigger than the canvas.",
+    description: "Move with the arrow keys, zoom with E/Q — the camera follows you around a world bigger than the canvas.",
   },
   {
     id: "groups-and-layers",
@@ -76,6 +76,12 @@ const EXAMPLES = [
     label: "Custom Events",
     category: "feature",
     description: "Send an HTTP request and handle it once it resolves, reported back in via sendEvent.",
+  },
+  {
+    id: "sprites",
+    label: "Sprites",
+    category: "feature",
+    description: "Load a spritesheet and render one frame from it — click to step through the sheet.",
   },
 ];
 
