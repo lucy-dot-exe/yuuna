@@ -3,3 +3,14 @@ dist/bundle**
 dist/yuuna.d.ts
 dist/examples/
 lib/
+
+# Game/example assets (art, sound, music) aren't necessarily
+# open-source/redistributable the way the code is — kept out of git so
+# they're never accidentally committed. yuuna.png is the project's own
+# logo, not a third-party asset, so it's the one exception.
+# runEngine() falls back to a generated placeholder for any image
+# resource that fails to load (e.g. because it isn't present here) — see
+# src/engine/runEngine.ts — so examples still run without these files,
+# just with placeholder art instead of the real thing.
+dist/resources/*
+!dist/resources/yuuna.png
