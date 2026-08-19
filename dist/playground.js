@@ -119,6 +119,12 @@ const EXAMPLES = [
     category: "feature",
     description: "canvas.resize keeps the logical resolution fixed while the display size tracks the window — click a mode to compare none/fit/stretch.",
   },
+  {
+    id: "fullscreen",
+    label: "Fullscreen",
+    category: "feature",
+    description: "requestFullscreen/exitFullscreen wrap the Fullscreen API on the canvas — click to go fullscreen, Esc (or click again) to leave.",
+  },
 ];
 
 function renderExamplesGrid() {
