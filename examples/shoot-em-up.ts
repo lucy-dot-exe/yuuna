@@ -19,7 +19,6 @@ type Enemy = { id: number; x: number; y: number };
 // Create a type for the state of your game
 type GameState = {
   ship: { x: number; y: number };
-  isFiring: boolean;
   fireCooldown: number;
   bullets: Bullet[];
   nextBulletId: number;
@@ -33,7 +32,6 @@ type GameState = {
 // Create the initial state
 const initialState: GameState = {
   ship: { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT - 60 },
-  isFiring: false,
   fireCooldown: 0,
   bullets: [],
   nextBulletId: 0,
@@ -43,12 +41,6 @@ const initialState: GameState = {
   score: 0,
   gameOver: false,
 };
-
-// The engine has no mousedown/mouseup event of its own — that's exactly
-// what a custom event is for (see examples/custom-events.ts). Holding the
-// button reports as one FIRE_START and one FIRE_STOP, not a stream of
-// events, so nextState just tracks isFiring in between them.
-type FireEvent = { tag: "FIRE_START" } | { tag: "FIRE_STOP" };
 
 const distance = (a: { x: number; y: number }, b: { x: number; y: number }) => {
   const dx = a.x - b.x;
@@ -131,30 +123,28 @@ const render: RenderFunction = (state) => {
 // undefined), meaning "no change, keep going" — nextState runs the whole
 // list in order for every event.
 
-const freezeOnGameOver: NextStateFunction<GameState, FireEvent> = ({ state }) => {
+const freezeOnGameOver: NextStateFunction<GameState> = ({ state }) => {
   if (state.gameOver) {
     return Yuuna.STOP;
   }
 };
 
-const followMouse: NextStateFunction<GameState, FireEvent> = ({ state, event }) => {
+const followMouse: NextStateFunction<GameState> = ({ state, event }) => {
   if (event.tag === "MOUSE_MOVE" && event.id === "arena") {
     return { ...state, ship: event.worldMouse };
   }
 };
 
-const trackFiring: NextStateFunction<GameState, FireEvent> = ({ state, event }) => {
-  if (event.tag === "CUSTOM") {
-    return { ...state, isFiring: event.event.tag === "FIRE_START" };
-  }
-};
-
-const fireBullets: NextStateFunction<GameState, FireEvent> = ({ state, event }) => {
+// mouseButton (see NextStateProps in src/engine/types.ts) is the
+// primary mouse button's held state — checking mouseButton.isPressed
+// here directly is the whole mechanic; no bridging through a custom
+// event or a raw canvas.addEventListener needed to know it's held.
+const fireBullets: NextStateFunction<GameState> = ({ state, event, mouseButton }) => {
   if (event.tag !== "TIME") return;
 
   const fireCooldown = state.fireCooldown - event.delta;
 
-  if (!state.isFiring || fireCooldown > 0) {
+  if (!mouseButton.isPressed || fireCooldown > 0) {
     return { ...state, fireCooldown };
   }
 
@@ -166,7 +156,7 @@ const fireBullets: NextStateFunction<GameState, FireEvent> = ({ state, event }) 
   };
 };
 
-const moveBullets: NextStateFunction<GameState, FireEvent> = ({ state, event }) => {
+const moveBullets: NextStateFunction<GameState> = ({ state, event }) => {
   if (event.tag === "TIME") {
     return {
       ...state,
@@ -177,7 +167,7 @@ const moveBullets: NextStateFunction<GameState, FireEvent> = ({ state, event }) 
   }
 };
 
-const spawnEnemies: NextStateFunction<GameState, FireEvent> = ({ state, event }) => {
+const spawnEnemies: NextStateFunction<GameState> = ({ state, event }) => {
   if (event.tag !== "TIME") return;
 
   const spawnTimer = state.spawnTimer - event.delta;
@@ -197,7 +187,7 @@ const spawnEnemies: NextStateFunction<GameState, FireEvent> = ({ state, event })
   };
 };
 
-const moveEnemies: NextStateFunction<GameState, FireEvent> = ({ state, event }) => {
+const moveEnemies: NextStateFunction<GameState> = ({ state, event }) => {
   if (event.tag === "TIME") {
     return {
       ...state,
@@ -211,7 +201,7 @@ const moveEnemies: NextStateFunction<GameState, FireEvent> = ({ state, event }) 
 // Bullet/enemy hits pay score and remove both; each is worth at most one
 // bullet per tick (a bullet can't hit two enemies at once, matching the
 // visual of one shot punching through)
-const resolveHits: NextStateFunction<GameState, FireEvent> = ({ state, event }) => {
+const resolveHits: NextStateFunction<GameState> = ({ state, event }) => {
   if (event.tag !== "TIME") return;
 
   const hitBulletIds = new Set<number>();
@@ -240,7 +230,7 @@ const resolveHits: NextStateFunction<GameState, FireEvent> = ({ state, event }) 
   };
 };
 
-const resolveShipCollision: NextStateFunction<GameState, FireEvent> = ({ state, event }) => {
+const resolveShipCollision: NextStateFunction<GameState> = ({ state, event }) => {
   if (event.tag !== "TIME") return;
 
   const hit = state.enemies.some((enemy) => distance(enemy, state.ship) < ENEMY_RADIUS + SHIP_RADIUS);
@@ -250,16 +240,14 @@ const resolveShipCollision: NextStateFunction<GameState, FireEvent> = ({ state, 
   }
 };
 
-// Runs the engine, then wires up raw mousedown/mouseup on the canvas —
-// the same sendEvent-stashing trick as examples/custom-events.ts, since
-// runEngine() only resolves with sendEvent once it's done loading
-Yuuna.runEngine<GameState, FireEvent>({
+// Runs the engine — no raw DOM listeners needed, mouseButton above is
+// the engine's own tool for "is the button currently held".
+Yuuna.runEngine<GameState>({
   initialState,
   render,
   nextState: [
     freezeOnGameOver,
     followMouse,
-    trackFiring,
     fireBullets,
     moveBullets,
     spawnEnemies,
@@ -269,10 +257,4 @@ Yuuna.runEngine<GameState, FireEvent>({
   ],
 
   canvas: { width: CANVAS_WIDTH, height: CANVAS_HEIGHT, backgroundColor: "#0d1831" },
-}).then(({ sendEvent }) => {
-  const canvas = document.getElementById("yuuna");
-
-  canvas?.addEventListener("mousedown", () => sendEvent({ tag: "FIRE_START" }));
-  canvas?.addEventListener("mouseup", () => sendEvent({ tag: "FIRE_STOP" }));
-  canvas?.addEventListener("mouseleave", () => sendEvent({ tag: "FIRE_STOP" }));
 });
