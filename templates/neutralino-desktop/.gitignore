@@ -1,0 +1,7 @@
+node_modules/
+# Vite's frontend build output (see vite.config.ts's build.outDir) — kept
+# separate from dist/ below so the two don't collide.
+app/
+# neu build's binary output.
+dist/
+.tmp/

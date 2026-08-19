@@ -1,0 +1,28 @@
+{
+  "applicationId": "engine.yuuna.template.desktop",
+  "version": "1.0.0",
+  "defaultMode": "window",
+  "port": 0,
+  "documentRoot": "/app/",
+  "url": "/",
+  "enableServer": true,
+  "enableNativeAPI": true,
+  "modes": {
+    "window": {
+      "title": "Yuuna game",
+      "width": 1000,
+      "height": 800,
+      "minWidth": 400,
+      "minHeight": 300,
+      "exitProcessOnClose": true
+    }
+  },
+  "cli": {
+    "binaryName": "yuuna-game",
+    "resourcesPath": "/app/",
+    "extensionsPath": "/extensions/",
+    "clientLibrary": "/app/neutralino.js",
+    "binaryVersion": "5.4.0",
+    "clientVersion": "5.4.0"
+  }
+}

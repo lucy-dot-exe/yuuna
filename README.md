@@ -107,10 +107,14 @@ hand? Grab one from [`templates/`](templates):
   open it in a browser and it runs.
 - **[npm](templates/npm)** — TypeScript + a dev server with hot reload
   (via Vite), for a real local project.
+- **[neutralino-desktop](templates/neutralino-desktop)** — the `npm`
+  template wrapped in [Neutralino](https://neutralino.js.org) to run as a
+  native desktop window instead of a browser tab.
 
 ```sh
 npx degit lucy-dot-exe/yuuna/templates/blank my-game
 # or: npx degit lucy-dot-exe/yuuna/templates/npm my-game
+# or: npx degit lucy-dot-exe/yuuna/templates/neutralino-desktop my-game
 ```
 
 [`degit`](https://github.com/Rich-Harris/degit) copies the folder without

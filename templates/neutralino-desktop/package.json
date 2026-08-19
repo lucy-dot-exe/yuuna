@@ -1,0 +1,22 @@
+{
+  "name": "yuuna-desktop-game",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "neu:update": "neu update",
+    "neu:run": "npm run build && neu run",
+    "neu:build": "npm run build && neu build"
+  },
+  "dependencies": {
+    "yuuna-engine": "^0.5.0"
+  },
+  "devDependencies": {
+    "@neutralinojs/neu": "^11.0.0",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.0"
+  }
+}
