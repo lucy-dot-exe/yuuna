@@ -1091,14 +1091,12 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
       }
 
       if (renderable.type === "SPRITE") {
-        const { opacity = 1, flipX = false, modulate, swapColors } = renderable;
+        const { opacity = 1, flipX = false, frame: frameIndex = 0, modulate, swapColors } = renderable;
         const resource = resourceById[renderable.resourceId];
 
         const frame = {
-          x: renderable.frame % resource.slices.horizontal,
-          y:
-            Math.floor(renderable.frame / resource.slices.horizontal) %
-            resource.slices.vertical,
+          x: frameIndex % resource.slices.horizontal,
+          y: Math.floor(frameIndex / resource.slices.horizontal) % resource.slices.vertical,
         };
 
         const source = {
@@ -1122,7 +1120,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
         let imageSource = source;
 
         if (swapColors !== undefined && swapColors.length > 0) {
-          image = swappedSpriteFrame(renderable.resourceId, renderable.frame, image, imageSource, swapColors);
+          image = swappedSpriteFrame(renderable.resourceId, frameIndex, image, imageSource, swapColors);
           imageSource = { x: 0, y: 0, width: source.width, height: source.height };
         }
 

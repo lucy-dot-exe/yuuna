@@ -66,7 +66,11 @@ export type SpriteRenderable = BaseRenderable & {
 
   position: { x: number; y: number };
   resourceId: string;
-  frame: number;
+  // Which slice of the sheet to draw, in row-major order (left to right,
+  // then top to bottom) — see RunEngineProps.resources' `slices`.
+  // Defaults to 0, the sheet's first (or only, for an unsliced image)
+  // frame.
+  frame?: number;
   opacity?: number;
   flipX?: boolean;
   // Palette swap — replaces every pixel exactly matching `from` with
