@@ -340,6 +340,20 @@ export type RunEngineProps<State, Custom = never> = {
     width?: number;
     height?: number;
     backgroundColor?: string;
+    // How the on-screen display size tracks the browser window,
+    // independent of the fixed logical resolution above (width/height) —
+    // every renderable's position stays in that logical space no matter
+    // what this is set to, so existing game code never has to account for
+    // it. Defaults to "none": today's behavior, CSS size matches the
+    // buffer size 1:1.
+    //  - "fit": scales uniformly to the largest size that stays within
+    //    the window, preserving aspect ratio (letterboxed).
+    //  - "stretch": fills the window on both axes independently, which
+    //    can distort art if the window's aspect ratio doesn't match the
+    //    canvas's.
+    // Left as a caller choice rather than an engine default since it's a
+    // real visual trade-off specific to each game.
+    resize?: "none" | "fit" | "stretch";
   };
   // Pans/zooms every world-space renderable (anything without
   // screenSpace: true) as a group — { x, y } is the world position that

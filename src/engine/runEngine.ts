@@ -111,6 +111,32 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   // leaking to the rest of the page (e.g. arrow keys scrolling the window).
   canvas.tabIndex = 0;
 
+  // Resizes the *display* size only (CSS width/height) — canvas.width/
+  // height above stays the fixed logical resolution every renderable's
+  // position is already expressed in, so this never needs to touch any
+  // of that math. See RunEngineProps.canvas.resize for the mode semantics.
+  const applyResize = () => {
+    const mode = props.canvas?.resize;
+
+    if (mode === undefined || mode === "none") {
+      return;
+    }
+
+    if (mode === "stretch") {
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      return;
+    }
+
+    const scale = Math.min(window.innerWidth / canvas.width, window.innerHeight / canvas.height);
+
+    canvas.style.width = `${canvas.width * scale}px`;
+    canvas.style.height = `${canvas.height * scale}px`;
+  };
+
+  applyResize();
+  window.addEventListener("resize", applyResize);
+
   let state: State = props.initialState;
 
   const events: (GameEvent | CustomGameEvent<Custom>)[] = [];
@@ -1165,6 +1191,9 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     // This one's on `document`, not the canvas — same reasoning as above,
     // just doubly true since `document` isn't even scoped to this canvas.
     window.document.removeEventListener("visibilitychange", handleVisibilityChange);
+
+    // Same pile-up risk as the canvas listeners above, but on `window`.
+    window.removeEventListener("resize", applyResize);
   };
 
   return { sendEvent };
