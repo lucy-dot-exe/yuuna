@@ -113,6 +113,12 @@ const EXAMPLES = [
     category: "feature",
     description: "One spritesheet, recolored into several variants with swapColors instead of a separate art asset per color.",
   },
+  {
+    id: "window-resize",
+    label: "Window Resize",
+    category: "feature",
+    description: "canvas.resize keeps the logical resolution fixed while the display size tracks the window — click a mode to compare none/fit/stretch.",
+  },
 ];
 
 function renderExamplesGrid() {
