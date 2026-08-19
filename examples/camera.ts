@@ -22,21 +22,23 @@ const GRID_STEP = 100;
 const gridLines: LineRenderable[] = [];
 
 for (let x = -GRID_RANGE; x <= GRID_RANGE; x += GRID_STEP) {
-  gridLines.push({
-    type: "LINE",
-    color: "#294066",
-    from: { x, y: -GRID_RANGE },
-    to: { x, y: GRID_RANGE },
-  });
+  gridLines.push(
+    Yuuna.line({
+      color: "#294066",
+      from: { x, y: -GRID_RANGE },
+      to: { x, y: GRID_RANGE },
+    })
+  );
 }
 
 for (let y = -GRID_RANGE; y <= GRID_RANGE; y += GRID_STEP) {
-  gridLines.push({
-    type: "LINE",
-    color: "#294066",
-    from: { x: -GRID_RANGE, y },
-    to: { x: GRID_RANGE, y },
-  });
+  gridLines.push(
+    Yuuna.line({
+      color: "#294066",
+      from: { x: -GRID_RANGE, y },
+      to: { x: GRID_RANGE, y },
+    })
+  );
 }
 
 // Create a function that renders the game, based on the state
@@ -47,29 +49,26 @@ const render: RenderFunction = (state) => {
       ...gridLines,
 
       // World-space — the camera below pans/zooms this along with the grid
-      {
-        type: "CIRCLE",
+      Yuuna.circle({
         color: "deepskyblue",
         position: state.player,
         radius: 20,
-      },
+      }),
 
       // screenSpace: true opts this out of the camera, so it stays fixed
       // in the corner instead of panning away with the world
-      {
-        type: "TEXT",
+      Yuuna.text({
         screenSpace: true,
         text: `world position: (${Math.round(state.player.x)}, ${Math.round(state.player.y)}) — zoom: ${state.zoom.toFixed(2)}x`,
         color: "white",
         position: { x: 10, y: 10 },
-      },
-      {
-        type: "TEXT",
+      }),
+      Yuuna.text({
         screenSpace: true,
         text: "Arrow keys to move, E to zoom in, Q to zoom out",
         color: "#8899aa",
         position: { x: 10, y: CANVAS.height - 24 },
-      },
+      }),
     ],
   };
 };

@@ -17,8 +17,7 @@ const render: RenderFunction = (state) => {
   return {
     renderables: [
       // Renders a cookie: a clickable chocolate-brown circle
-      {
-        type: "CIRCLE",
+      Yuuna.circle({
         color: "#6B4423",
 
         isClickable: true,
@@ -29,12 +28,11 @@ const render: RenderFunction = (state) => {
           y: CENTER.y,
         },
         radius: 30,
-      },
+      }),
 
       // Renders a text display for the number of cookies, vertically
       // centered against the cookie
-      {
-        type: "TEXT",
+      Yuuna.text({
         text: `${state.cookies} cookies`,
         color: "white",
 
@@ -47,7 +45,7 @@ const render: RenderFunction = (state) => {
           x: "left",
           y: "middle",
         },
-      },
+      }),
     ],
   };
 };

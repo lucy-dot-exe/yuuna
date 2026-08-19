@@ -39,23 +39,21 @@ const render: RenderFunction = (state) => {
     renderables: [
       // A clickable rectangle standing in for a button — isClickable
       // plus an id is all any renderable needs to receive CLICK events
-      {
-        type: "RECTANGLE",
+      Yuuna.rectangle({
         id: "fetch-button",
         isClickable: true,
         color: state.status === "loading" ? "#555" : "#2d5c8f",
 
         position: { x: CENTER.x - 150, y: CENTER.y - 25 },
         size: { width: 300, height: 50 },
-      },
-      {
-        type: "TEXT",
+      }),
+      Yuuna.text({
         text: label,
         color: "white",
 
         position: { x: CENTER.x, y: CENTER.y },
         align: { x: "center", y: "middle" },
-      },
+      }),
     ],
   };
 };

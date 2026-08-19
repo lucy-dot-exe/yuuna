@@ -41,22 +41,22 @@ const tileGrid = (
 
   for (let row = 0; row < rows; row++) {
     for (let column = 0; column < columns; column++) {
-      tiles.push({
-        type: "SPRITE",
-        resourceId: "terrain",
-        frame,
-        position: { x: column * TERRAIN_TILE_SIZE, y: row * TERRAIN_TILE_SIZE },
-      });
+      tiles.push(
+        Yuuna.sprite({
+          resourceId: "terrain",
+          frame,
+          position: { x: column * TERRAIN_TILE_SIZE, y: row * TERRAIN_TILE_SIZE },
+        })
+      );
     }
   }
 
-  return {
-    type: "GROUP",
+  return Yuuna.group({
     position: area.position,
     scale: { x: TERRAIN_SCALE, y: TERRAIN_SCALE },
     layer: LAYERS.terrain,
     children: tiles,
-  };
+  });
 };
 
 const HP_BAR_WIDTH = 32;
@@ -75,14 +75,12 @@ const enemyGroup = (enemy: Enemy, paused: boolean): Renderable => {
   // keeping red), layered on top of the existing opacity fade
   const damageChannel = Math.round(255 * hpFraction);
 
-  return {
-    type: "GROUP",
+  return Yuuna.group({
     layer: LAYERS.enemy,
     position: { x: enemy.x, y: LANE_Y },
 
     children: [
-      {
-        type: "ANIMATED_SPRITE",
+      Yuuna.animatedSprite({
         id: `enemy-${enemy.id}-skeleton`,
         resourceId: "skeleton",
         animation: "walk",
@@ -93,28 +91,26 @@ const enemyGroup = (enemy: Enemy, paused: boolean): Renderable => {
         opacity: Math.max(0.35, hpFraction),
         modulate: `rgb(255, ${damageChannel}, ${damageChannel})`,
         position: { x: -displaySize / 2, y: -displaySize / 2 },
-      },
+      }),
 
       // Health bar background
-      {
-        type: "RECTANGLE",
+      Yuuna.rectangle({
         color: "#222222",
         position: { x: -HP_BAR_WIDTH / 2, y: -displaySize / 2 - 10 },
         size: { width: HP_BAR_WIDTH, height: HP_BAR_HEIGHT },
-      },
+      }),
       // Health bar fill — scaled by remaining hp fraction. RECTANGLE's
       // scale anchors at its own position (its top-left corner, here the
       // bar's left edge), so shrinking scale.x pulls the right edge in
       // and drains the bar from the right while the left edge stays put.
-      {
-        type: "RECTANGLE",
+      Yuuna.rectangle({
         color: hpFraction > 0.5 ? "#5ec95e" : hpFraction > 0.25 ? "#e0c341" : "#e05a4b",
         position: { x: -HP_BAR_WIDTH / 2, y: -displaySize / 2 - 10 },
         size: { width: HP_BAR_WIDTH, height: HP_BAR_HEIGHT },
         scale: { x: hpFraction, y: 1 },
-      },
+      }),
     ],
-  };
+  });
 };
 
 type RenderFunction = (state: GameState) => { renderables: Renderable[] };
@@ -139,8 +135,7 @@ export const render: RenderFunction = (state) => {
     // into each of them individually. Turrets/build-area/UI stay outside
     // it: they're procedural shapes in the same fixed coordinate system
     // gameplay logic (turret range, click targets) uses, not pixel art.
-    {
-      type: "GROUP",
+    Yuuna.group({
       position: { x: 0, y: 0 },
       scale: { x: PIXEL_ART_SCALE, y: PIXEL_ART_SCALE },
       children: [
@@ -150,53 +145,49 @@ export const render: RenderFunction = (state) => {
         tileGrid(lane, TERRAIN_PATH_FRAME),
 
         // A walking skeleton + health bar for each enemy — see enemyGroup
-        ...state.enemies.map((enemy): Renderable => enemyGroup(enemy, state.lives <= 0)),
+        ...state.enemies.map((enemy) => enemyGroup(enemy, state.lives <= 0)),
 
         // A one-shot burst where an enemy died — plays once and holds on
         // its last frame (see the "burst" animation in main.ts); how long
         // the explosion entity itself survives in state is still
         // resolveKills/ageExplosions' job, unrelated to which frame shows
-        ...state.explosions.map((explosion): Renderable => {
+        ...state.explosions.map((explosion) => {
           const displaySize = EXPLOSION_FRAME_SIZE * EXPLOSION_SCALE;
 
-          return {
-            type: "ANIMATED_SPRITE",
+          return Yuuna.animatedSprite({
             id: `explosion-${explosion.id}`,
             resourceId: "explosion",
             animation: "burst",
             scale: { x: EXPLOSION_SCALE, y: EXPLOSION_SCALE },
             layer: LAYERS.explosion,
             position: { x: explosion.x - displaySize / 2, y: explosion.y - displaySize / 2 },
-          };
+          });
         }),
       ],
-    },
+    }),
 
     // Invisible click targets over the buildable ground, above and below
     // the path — clicking either builds a turret at that spot
-    {
-      type: "RECTANGLE",
+    Yuuna.rectangle({
       color: "transparent",
       isClickable: true,
       id: "build-area",
       layer: LAYERS.buildArea,
       ...aboveLane,
-    },
-    {
-      type: "RECTANGLE",
+    }),
+    Yuuna.rectangle({
       color: "transparent",
       isClickable: true,
       id: "build-area",
       layer: LAYERS.buildArea,
       ...belowLane,
-    },
+    }),
 
     // Turrets: each focuses one enemy at a time within TOWER_RANGE.
     // Tinted dim while recharging and bright once ready to fire, via
     // modulate, so readiness reads at a glance without extra UI.
-    ...state.turrets.map(
-      (turret): Renderable => ({
-        type: "RECTANGLE",
+    ...state.turrets.map((turret) =>
+      Yuuna.rectangle({
         color: "steelblue",
         modulate: turret.cooldown > 0 ? "#888899" : "#aaccff",
         layer: LAYERS.turret,
@@ -206,9 +197,8 @@ export const render: RenderFunction = (state) => {
     ),
 
     // A line flashes from turret to target for a moment when it fires
-    ...state.beams.map(
-      (beam): Renderable => ({
-        type: "LINE",
+    ...state.beams.map((beam) =>
+      Yuuna.line({
         from: beam.from,
         to: beam.to,
         color: "yellow",
@@ -219,51 +209,48 @@ export const render: RenderFunction = (state) => {
 
     // screenSpace: true keeps the UI fixed and readable regardless of the
     // camera's zoom — everything above stays in the game world with it.
-    {
-      type: "TEXT",
+    Yuuna.text({
       text: `Score: ${state.score}`,
       color: "white",
       layer: LAYERS.ui,
       screenSpace: true,
       position: { x: 20, y: 30 },
-    },
-    {
-      type: "TEXT",
+    }),
+    Yuuna.text({
       text: `Lives: ${state.lives}`,
       color: "white",
       layer: LAYERS.ui,
       screenSpace: true,
       position: { x: 20, y: 70 },
-    },
-    {
-      type: "TEXT",
+    }),
+    Yuuna.text({
       text: `Gold: ${state.gold}`,
       color: "#ffd700",
       layer: LAYERS.ui,
       screenSpace: true,
       position: { x: 20, y: 110 },
-    },
-    {
-      type: "TEXT",
+    }),
+    Yuuna.text({
       text: `Click off the path to build a turret (${TURRET_COST} gold)`,
       color: "#8899aa",
       layer: LAYERS.ui,
       screenSpace: true,
       position: { x: 20, y: CANVAS_HEIGHT - 30 },
-    },
+    }),
   ];
 
   if (state.lives <= 0) {
-    renderables.push({
-      type: "TEXT",
-      text: "Game Over",
-      color: "white",
-      fontSize: 48,
-      layer: LAYERS.gameOver,
-      screenSpace: true,
-      position: { x: CANVAS_WIDTH / 2, y: LANE_Y },
-      align: { x: "center", y: "middle" },
-    });
+    renderables.push(
+      Yuuna.text({
+        text: "Game Over",
+        color: "white",
+        fontSize: 48,
+        layer: LAYERS.gameOver,
+        screenSpace: true,
+        position: { x: CANVAS_WIDTH / 2, y: LANE_Y },
+        align: { x: "center", y: "middle" },
+      })
+    );
   }
 
   return { renderables };

@@ -26,27 +26,24 @@ const initialState: GameState = { isFullscreen: false };
 type RenderFunction = (state: GameState) => { renderables: Renderable[] };
 const render: RenderFunction = (state) => ({
   renderables: [
-    {
-      type: "RECTANGLE",
+    Yuuna.rectangle({
       color: "#2d5c8f",
       position: { x: CENTER.x - 140, y: CENTER.y - 25 },
       size: { width: 280, height: 50 },
-    },
-    {
-      type: "TEXT",
+    }),
+    Yuuna.text({
       text: state.isFullscreen ? "Fullscreen" : "Not fullscreen",
       color: "white",
       position: CENTER,
       align: { x: "center", y: "middle" },
-    },
-    {
-      type: "TEXT",
+    }),
+    Yuuna.text({
       text: "Click anywhere to toggle fullscreen (or press Esc to leave it)",
       color: "#8899aa",
       fontSize: 20,
       position: { x: CENTER.x, y: CANVAS_HEIGHT - 30 },
       align: { x: "center", y: "middle" },
-    },
+    }),
   ],
 });
 

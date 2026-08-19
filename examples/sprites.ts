@@ -29,8 +29,7 @@ const render: RenderFunction = (state) => {
       // A single frame from the sheet, picked by index — resourceId
       // points at the loaded spritesheet (see resources below), frame is
       // its position in slices/vertical * horizontal + column order
-      {
-        type: "SPRITE",
+      Yuuna.sprite({
         resourceId: "food",
         frame: state.frame,
         scale: { x: SPRITE_SCALE, y: SPRITE_SCALE },
@@ -45,22 +44,20 @@ const render: RenderFunction = (state) => {
           x: center.x - (8 * SPRITE_SCALE) / 2,
           y: center.y - (8 * SPRITE_SCALE) / 2,
         },
-      },
+      }),
 
-      {
-        type: "TEXT",
+      Yuuna.text({
         text: `Frame ${state.frame} / ${FRAME_COUNT - 1}`,
         color: "white",
         position: { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 + 90 },
         align: { x: "center", y: "middle" },
-      },
-      {
-        type: "TEXT",
+      }),
+      Yuuna.text({
         text: "Click the sprite to step through the sheet",
         color: "#8899aa",
         position: { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT - 30 },
         align: { x: "center", y: "middle" },
-      },
+      }),
     ],
   };
 };

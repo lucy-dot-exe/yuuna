@@ -70,8 +70,7 @@ const render: RenderFunction = (state) => {
         const center = { x: columnWidth * (index + 0.5), y: CANVAS_HEIGHT / 2 - 20 };
 
         return [
-          {
-            type: "ANIMATED_SPRITE",
+          Yuuna.animatedSprite({
             resourceId: "skeleton",
             animation: "walk",
             paused: state.paused[index],
@@ -82,24 +81,22 @@ const render: RenderFunction = (state) => {
             id: `skeleton-${index}`,
 
             position: { x: center.x - displaySize / 2, y: center.y - displaySize / 2 },
-          },
-          {
-            type: "TEXT",
+          }),
+          Yuuna.text({
             text: palette.label,
             color: "white",
             position: { x: center.x, y: center.y + 90 },
             align: { x: "center", y: "middle" },
-          },
+          }),
         ];
       }),
 
-      {
-        type: "TEXT",
+      Yuuna.text({
         text: "Click a skeleton to pause/resume just that one",
         color: "#8899aa",
         position: { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT - 30 },
         align: { x: "center", y: "middle" },
-      },
+      }),
     ],
   };
 };

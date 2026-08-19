@@ -25,36 +25,32 @@ type RenderFunction = (state: GameState) => { renderables: Renderable[] };
 const render: RenderFunction = (state) => {
   return {
     renderables: [
-      {
-        type: "CIRCLE",
+      Yuuna.circle({
         color: state.isFocused ? "#4fc3f7" : "#e05a4b",
         position: CENTER,
         radius: 40,
-      },
-      {
-        type: "TEXT",
+      }),
+      Yuuna.text({
         text: state.isFocused ? "Focused" : "Blurred",
         color: "white",
         fontSize: 20,
         position: CENTER,
         align: { x: "center", y: "middle" },
-      },
+      }),
 
-      {
-        type: "TEXT",
+      Yuuna.text({
         text: `Switched away ${state.blurCount} time(s)`,
         color: "white",
         position: { x: CANVAS_WIDTH / 2, y: CENTER.y + 80 },
         align: { x: "center", y: "middle" },
-      },
-      {
-        type: "TEXT",
+      }),
+      Yuuna.text({
         text: "Music pauses on TAB_BLUR, resumes on TAB_FOCUS",
         color: "#8899aa",
         fontSize: 22,
         position: { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT - 30 },
         align: { x: "center", y: "middle" },
-      },
+      }),
     ],
   };
 };

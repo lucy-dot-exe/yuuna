@@ -18,8 +18,7 @@ const render: RenderFunction = (state) => {
 
   return {
     renderables: [
-      {
-        type: "GROUP",
+      Yuuna.group({
         position: CENTER,
         // Scaling the group scales every child with it, anchored at the
         // group's own position. GROUP itself is never interactable — it
@@ -31,19 +30,17 @@ const render: RenderFunction = (state) => {
           // The planet itself — position is relative to the group's, so
           // { x: 0, y: 0 } here means "centered on the group". This is
           // the renderable that's actually hoverable.
-          {
-            type: "CIRCLE",
+          Yuuna.circle({
             id: "planet",
             isHoverable: true,
             color: "#3a7bd5",
             position: { x: 0, y: 0 },
             radius: 50,
-          },
+          }),
 
           // A moon in front of the planet — layer is relative to its
           // parent's, so 1 here means "one step in front of the group"
-          {
-            type: "CIRCLE",
+          Yuuna.circle({
             color: "#cccccc",
             position: { x: 90 + wobble, y: 0 },
             radius: 14,
@@ -52,27 +49,25 @@ const render: RenderFunction = (state) => {
             // same "#ff0000" on the planet above would keep only the
             // planet's red channel too, if it had one
             modulate: state.hovered ? "#ff8080" : undefined,
-          },
+          }),
 
           // A moon behind the planet — layer: -1 draws it before (i.e.
           // underneath) the group, so the planet occludes it here
-          {
-            type: "CIRCLE",
+          Yuuna.circle({
             color: "#999999",
             position: { x: -70 - wobble, y: 0 },
             radius: 10,
             layer: -1,
-          },
+          }),
         ],
-      },
+      }),
 
-      {
-        type: "TEXT",
+      Yuuna.text({
         text: "hover the planet",
         color: "white",
         position: { x: CENTER.x, y: CENTER.y + 100 },
         align: { x: "center", y: "top" },
-      },
+      }),
     ],
   };
 };

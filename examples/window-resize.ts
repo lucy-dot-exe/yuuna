@@ -36,27 +36,29 @@ const render: RenderFunction = (state) => {
   // matching the canvas's, "fit" keeps them square (with letterboxing)
   // instead.
   for (let x = 0; x <= CANVAS_WIDTH; x += GRID_SIZE) {
-    renderables.push({ type: "LINE", from: { x, y: 0 }, to: { x, y: CANVAS_HEIGHT }, color: "#22335a" });
+    renderables.push(Yuuna.line({ from: { x, y: 0 }, to: { x, y: CANVAS_HEIGHT }, color: "#22335a" }));
   }
   for (let y = 0; y <= CANVAS_HEIGHT; y += GRID_SIZE) {
-    renderables.push({ type: "LINE", from: { x: 0, y }, to: { x: CANVAS_WIDTH, y }, color: "#22335a" });
+    renderables.push(Yuuna.line({ from: { x: 0, y }, to: { x: CANVAS_WIDTH, y }, color: "#22335a" }));
   }
 
-  renderables.push({
-    type: "TEXT",
-    text: `canvas.resize: "${state.mode}"`,
-    color: "white",
-    position: { x: CANVAS_WIDTH / 2, y: 50 },
-    align: { x: "center", y: "middle" },
-  });
-  renderables.push({
-    type: "TEXT",
-    text: "Try resizing the browser window",
-    color: "#8899aa",
-    fontSize: 20,
-    position: { x: CANVAS_WIDTH / 2, y: 90 },
-    align: { x: "center", y: "middle" },
-  });
+  renderables.push(
+    Yuuna.text({
+      text: `canvas.resize: "${state.mode}"`,
+      color: "white",
+      position: { x: CANVAS_WIDTH / 2, y: 50 },
+      align: { x: "center", y: "middle" },
+    })
+  );
+  renderables.push(
+    Yuuna.text({
+      text: "Try resizing the browser window",
+      color: "#8899aa",
+      fontSize: 20,
+      position: { x: CANVAS_WIDTH / 2, y: 90 },
+      align: { x: "center", y: "middle" },
+    })
+  );
 
   const buttonWidth = 140;
   const buttonHeight = 44;
@@ -68,21 +70,23 @@ const render: RenderFunction = (state) => {
   MODES.forEach((mode, index) => {
     const x = startX + index * (buttonWidth + gap);
 
-    renderables.push({
-      type: "RECTANGLE",
-      id: `mode-${mode}`,
-      isClickable: true,
-      color: mode === state.mode ? "#0d6efd" : "#334166",
-      position: { x, y: buttonY },
-      size: { width: buttonWidth, height: buttonHeight },
-    });
-    renderables.push({
-      type: "TEXT",
-      text: mode,
-      color: "white",
-      position: { x: x + buttonWidth / 2, y: buttonY + buttonHeight / 2 },
-      align: { x: "center", y: "middle" },
-    });
+    renderables.push(
+      Yuuna.rectangle({
+        id: `mode-${mode}`,
+        isClickable: true,
+        color: mode === state.mode ? "#0d6efd" : "#334166",
+        position: { x, y: buttonY },
+        size: { width: buttonWidth, height: buttonHeight },
+      })
+    );
+    renderables.push(
+      Yuuna.text({
+        text: mode,
+        color: "white",
+        position: { x: x + buttonWidth / 2, y: buttonY + buttonHeight / 2 },
+        align: { x: "center", y: "middle" },
+      })
+    );
   });
 
   return { renderables };
@@ -90,8 +94,12 @@ const render: RenderFunction = (state) => {
 
 // Create a function that handles the game state
 const nextState: NextStateFunction<GameState> = ({ state, event }) => {
+  // A bare `return;` here (with no other branch ever returning a real
+  // value) would make TypeScript infer this whole function as
+  // returning void instead of undefined — which NextStateFunction
+  // doesn't accept, unlike the plain "no change" it's meant to signal.
   if (event.tag !== "CLICK") {
-    return;
+    return undefined;
   }
 
   const clicked = MODES.find((mode) => event.id === `mode-${mode}`);

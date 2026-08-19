@@ -21,8 +21,7 @@ type RenderFunction = (state: GameState) => { renderables: Renderable[] };
 const render: RenderFunction = (state) => {
   return {
     renderables: [
-      {
-        type: "TEXT",
+      Yuuna.text({
         text: state.isPlaying ? "⏸  Pause" : "▶  Play",
         color: "white",
         fontSize: 28,
@@ -32,12 +31,11 @@ const render: RenderFunction = (state) => {
 
         position: { x: CENTER.x, y: CENTER.y - 40 },
         align: { x: "center", y: "middle" },
-      },
+      }),
 
       // Volume down / up, either side of a readout — clamped in
       // nextState below, so these two are always safe to click
-      {
-        type: "TEXT",
+      Yuuna.text({
         text: "−",
         color: "#8899aa",
         fontSize: 28,
@@ -45,16 +43,14 @@ const render: RenderFunction = (state) => {
         id: "volume-down",
         position: { x: CENTER.x - 140, y: CENTER.y + 30 },
         align: { x: "center", y: "middle" },
-      },
-      {
-        type: "TEXT",
+      }),
+      Yuuna.text({
         text: `Volume: ${Math.round(state.volume * 100)}%`,
         color: "white",
         position: { x: CENTER.x, y: CENTER.y + 30 },
         align: { x: "center", y: "middle" },
-      },
-      {
-        type: "TEXT",
+      }),
+      Yuuna.text({
         text: "+",
         color: "#8899aa",
         fontSize: 28,
@@ -62,15 +58,14 @@ const render: RenderFunction = (state) => {
         id: "volume-up",
         position: { x: CENTER.x + 140, y: CENTER.y + 30 },
         align: { x: "center", y: "middle" },
-      },
+      }),
 
-      {
-        type: "TEXT",
+      Yuuna.text({
         text: "Click Play, then try the volume buttons while it's playing",
         color: "#8899aa",
         position: { x: CENTER.x, y: CANVAS_HEIGHT - 30 },
         align: { x: "center", y: "middle" },
-      },
+      }),
     ],
   };
 };

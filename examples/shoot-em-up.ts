@@ -64,28 +64,25 @@ const render: RenderFunction = (state) => {
     // position no matter where it is — that's how the ship "follows the
     // mouse" without the engine needing a raw, always-on mouse-position
     // event of its own.
-    {
-      type: "RECTANGLE",
+    Yuuna.rectangle({
       id: "arena",
       isHoverable: true,
       trackMouseMovement: true,
       color: "transparent",
       position: { x: 0, y: 0 },
       size: { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
-    },
+    }),
 
-    ...state.enemies.map(
-      (enemy): Renderable => ({
-        type: "CIRCLE",
+    ...state.enemies.map((enemy) =>
+      Yuuna.circle({
         color: "#e05a4b",
         position: { x: enemy.x, y: enemy.y },
         radius: ENEMY_RADIUS,
       })
     ),
 
-    ...state.bullets.map(
-      (bullet): Renderable => ({
-        type: "CIRCLE",
+    ...state.bullets.map((bullet) =>
+      Yuuna.circle({
         color: "#ffd76a",
         position: { x: bullet.x, y: bullet.y },
         radius: BULLET_RADIUS,
@@ -94,34 +91,31 @@ const render: RenderFunction = (state) => {
 
     // The ship itself — a cockpit circle nested inside the hull so it
     // rides along at the same position without repeating state.ship.x/y
-    {
-      type: "CIRCLE",
+    Yuuna.circle({
       color: "#4fc3f7",
       position: state.ship,
       radius: SHIP_RADIUS,
-      children: [
-        { type: "CIRCLE", color: "#0d1831", position: { x: 0, y: 0 }, radius: SHIP_RADIUS / 2 },
-      ],
-    },
+      children: [Yuuna.circle({ color: "#0d1831", position: { x: 0, y: 0 }, radius: SHIP_RADIUS / 2 })],
+    }),
 
-    { type: "TEXT", text: `Score: ${state.score}`, color: "white", position: { x: 20, y: 20 } },
-    {
-      type: "TEXT",
+    Yuuna.text({ text: `Score: ${state.score}`, color: "white", position: { x: 20, y: 20 } }),
+    Yuuna.text({
       text: "Move the mouse to fly, click and hold to shoot",
       color: "#8899aa",
       position: { x: 20, y: CANVAS_HEIGHT - 30 },
-    },
+    }),
   ];
 
   if (state.gameOver) {
-    renderables.push({
-      type: "TEXT",
-      text: "Game Over",
-      color: "white",
-      fontSize: 48,
-      position: { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 },
-      align: { x: "center", y: "middle" },
-    });
+    renderables.push(
+      Yuuna.text({
+        text: "Game Over",
+        color: "white",
+        fontSize: 48,
+        position: { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 },
+        align: { x: "center", y: "middle" },
+      })
+    );
   }
 
   // The ship already stands in for the pointer, so the OS cursor is just

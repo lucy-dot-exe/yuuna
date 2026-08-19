@@ -28,8 +28,7 @@ const render: RenderFunction = (state) => {
 
   return {
     renderables: [
-      {
-        type: "ANIMATED_SPRITE",
+      Yuuna.animatedSprite({
         resourceId: "skeleton",
         animation: "walk",
         paused: state.paused,
@@ -41,22 +40,20 @@ const render: RenderFunction = (state) => {
         // Like SPRITE, position anchors the top-left corner — offset
         // back by half the scaled-up size to center it on `center`
         position: { x: center.x - displaySize / 2, y: center.y - displaySize / 2 },
-      },
+      }),
 
-      {
-        type: "TEXT",
+      Yuuna.text({
         text: state.paused ? "Paused" : "Playing",
         color: "white",
         position: { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 + 90 },
         align: { x: "center", y: "middle" },
-      },
-      {
-        type: "TEXT",
+      }),
+      Yuuna.text({
         text: "Click the sprite to pause/resume the animation",
         color: "#8899aa",
         position: { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT - 30 },
         align: { x: "center", y: "middle" },
-      },
+      }),
     ],
   };
 };

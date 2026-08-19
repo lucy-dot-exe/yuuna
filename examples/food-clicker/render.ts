@@ -11,8 +11,7 @@ export const render: RenderFunction = (state) => {
   return {
     renderables: [
       // Renders the score, centered on the canvas
-      {
-        type: "TEXT",
+      Yuuna.text({
         text: `${state.eaten}`,
         color: "white",
 
@@ -22,11 +21,10 @@ export const render: RenderFunction = (state) => {
           x: "center",
           y: "middle",
         },
-      },
+      }),
 
       // Renders a music on/off icon in the top-right corner
-      {
-        type: "TEXT",
+      Yuuna.text({
         text: state.isMusicPlaying ? "⏸" : "▶",
         color: "white",
 
@@ -39,12 +37,11 @@ export const render: RenderFunction = (state) => {
           x: "right",
           y: "middle",
         },
-      },
+      }),
 
       // Renders each currently-spawned food, fading out as it ages
-      ...state.foods.map(
-        (food): Renderable => ({
-          type: "SPRITE",
+      ...state.foods.map((food) =>
+        Yuuna.sprite({
           resourceId: "food",
           frame: food.frame,
           scale: { x: FOOD_SCALE, y: FOOD_SCALE },
@@ -59,11 +56,10 @@ export const render: RenderFunction = (state) => {
 
       // Renders each "+1" popup, drifting upward and fading out via its
       // color's alpha channel — TEXT has no opacity prop like SPRITE does
-      ...state.popups.map((popup): Renderable => {
+      ...state.popups.map((popup) => {
         const progress = popup.age / POPUP_DURATION;
 
-        return {
-          type: "TEXT",
+        return Yuuna.text({
           text: "+1",
           color: `rgba(255, 215, 0, ${Math.max(0, 1 - progress)})`,
 
@@ -73,7 +69,7 @@ export const render: RenderFunction = (state) => {
             x: "center",
             y: "middle",
           },
-        };
+        });
       }),
     ],
   };

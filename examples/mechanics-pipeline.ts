@@ -19,38 +19,34 @@ const render: RenderFunction = (state) => {
       // full-canvas rectangle is what "a miss" actually hits; it's listed
       // before the target below so the target (same layer) draws on top
       // and wins the hit-test wherever the two overlap.
-      {
-        type: "RECTANGLE",
+      Yuuna.rectangle({
         id: "background",
         isClickable: true,
         color: "#0d1831",
         position: { x: 0, y: 0 },
         size: { width: 960, height: 540 },
-      },
-      {
-        type: "CIRCLE",
+      }),
+      Yuuna.circle({
         id: "target",
         isClickable: true,
         color: state.isOver ? "#555" : "crimson",
         position: CENTER,
         radius: 40,
-      },
-      {
-        type: "TEXT",
+      }),
+      Yuuna.text({
         text: state.isOver
           ? `Game over — ${state.hits} hits`
           : `${state.hits} hits · ${state.livesLeft} lives left`,
         color: "white",
         position: { x: CENTER.x, y: CENTER.y - 80 },
         align: { x: "center", y: "bottom" },
-      },
-      {
-        type: "TEXT",
+      }),
+      Yuuna.text({
         text: state.isOver ? "" : "Click the target — missing costs a life",
         color: "#aaaaaa",
         position: { x: CENTER.x, y: CENTER.y + 80 },
         align: { x: "center", y: "top" },
-      },
+      }),
     ],
   };
 };
