@@ -470,4 +470,16 @@ export type KeyboardState = Record<KeyboardKeys, boolean>;
 export declare var Yuuna: {
   runEngine: RunEngineFunction;
   STOP: typeof STOP;
+  // One factory per Renderable variant — see src/engine/renderables.ts.
+  // Declared here (rather than derived from that file, the way the rest
+  // of this block mirrors src/index.ts's exports) because an ambient
+  // `declare const` can't carry an initializer, which is all a factory
+  // like `rectangle` actually is.
+  rectangle: (props: Omit<RectangleRenderable, "type">) => RectangleRenderable;
+  circle: (props: Omit<CircleRenderable, "type">) => CircleRenderable;
+  text: (props: Omit<TextRenderable, "type">) => TextRenderable;
+  sprite: (props: Omit<SpriteRenderable, "type">) => SpriteRenderable;
+  animatedSprite: (props: Omit<AnimatedSpriteRenderable, "type">) => AnimatedSpriteRenderable;
+  line: (props: Omit<LineRenderable, "type">) => LineRenderable;
+  group: (props: Omit<GroupRenderable, "type">) => GroupRenderable;
 };

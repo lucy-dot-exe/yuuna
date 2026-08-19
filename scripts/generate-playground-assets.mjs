@@ -8,7 +8,12 @@ const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 // (matching dist/bundle.js, a browser IIFE), not the ES module exports
 // consumers get from npm. This turns the real source types into the
 // ambient-global declarations Monaco needs, so the playground never
-// drifts from src/engine/types.ts.
+// drifts from src/engine/types.ts — including the `declare var Yuuna`
+// block down there, which is the actual source of truth for what
+// `Yuuna.runEngine`/`Yuuna.sprite`/etc. type-check as (kept in types.ts
+// by hand rather than derived from src/engine/renderables.ts, since a
+// factory like `rectangle`'s own declared type there would need an
+// initializer here too, which ambient contexts don't allow).
 async function generateAmbientTypes() {
   const sourcePath = path.join(root, "src/engine/types.ts");
   const outputPath = path.join(root, "dist/yuuna.d.ts");
