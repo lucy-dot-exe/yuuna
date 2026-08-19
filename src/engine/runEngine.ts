@@ -137,6 +137,13 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   applyResize();
   window.addEventListener("resize", applyResize);
 
+  const requestFullscreen = () => canvas.requestFullscreen();
+  // exitFullscreen() rejects with a TypeError if nothing is fullscreen —
+  // guarded into a no-op instead, so callers don't need to track that
+  // state themselves just to call this safely.
+  const exitFullscreen = () =>
+    window.document.fullscreenElement === null ? Promise.resolve() : window.document.exitFullscreen();
+
   let state: State = props.initialState;
 
   const events: (GameEvent | CustomGameEvent<Custom>)[] = [];
@@ -277,9 +284,11 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
   // A newer runEngine() call started while this one was still loading
   // resources (e.g. a spritesheet) — abandon this run instead of setting
-  // up a second, orphaned render loop alongside the newer one.
+  // up a second, orphaned render loop alongside the newer one. The
+  // fullscreen functions are no-ops here since this run never gets far
+  // enough to own the canvas — the newer run's are the ones that matter.
   if (runId !== latestRunId) {
-    return { sendEvent };
+    return { sendEvent, requestFullscreen: () => Promise.resolve(), exitFullscreen: () => Promise.resolve() };
   }
 
   context.imageSmoothingEnabled = false;
@@ -775,6 +784,19 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
   window.document.addEventListener("visibilitychange", handleVisibilityChange);
 
+  // Fullscreen is a document-level concern too, and fires for every way
+  // fullscreen can change — the requestFullscreen()/exitFullscreen()
+  // above, but also things neither of those causes directly, like the
+  // user pressing Esc. Re-running applyResize() here (rather than relying
+  // solely on the "resize" listener) covers browsers that don't also fire
+  // a window resize when fullscreen is toggled.
+  const handleFullscreenChange = () => {
+    events.push({ tag: "FULLSCREEN_CHANGE", isFullscreen: window.document.fullscreenElement === canvas });
+    applyResize();
+  };
+
+  window.document.addEventListener("fullscreenchange", handleFullscreenChange);
+
   context.imageSmoothingEnabled = false;
 
   // Scale is a canvas transform around the renderable's anchor, applied
@@ -1191,10 +1213,11 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     // This one's on `document`, not the canvas — same reasoning as above,
     // just doubly true since `document` isn't even scoped to this canvas.
     window.document.removeEventListener("visibilitychange", handleVisibilityChange);
+    window.document.removeEventListener("fullscreenchange", handleFullscreenChange);
 
     // Same pile-up risk as the canvas listeners above, but on `window`.
     window.removeEventListener("resize", applyResize);
   };
 
-  return { sendEvent };
+  return { sendEvent, requestFullscreen, exitFullscreen };
 };

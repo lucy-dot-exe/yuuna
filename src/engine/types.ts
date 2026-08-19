@@ -204,6 +204,13 @@ export type TabFocusEvent = { tag: "TAB_FOCUS" };
 // since a looping track restarts instead of ever "ending".
 export type MusicEndEvent = { tag: "MUSIC_END"; id: string };
 
+// Fires whenever fullscreen is entered or exited — whether that came from
+// requestFullscreen()/exitFullscreen() (the functions runEngine() resolves
+// with) or any other way the browser can leave fullscreen (e.g. the user
+// pressing Esc), so this is the reliable place to react to the *actual*
+// state rather than assuming a requestFullscreen() call succeeded.
+export type FullscreenChangeEvent = { tag: "FULLSCREEN_CHANGE"; isFullscreen: boolean };
+
 export type GameEvent =
   | TimeEvent
   | ClickEvent
@@ -213,7 +220,8 @@ export type GameEvent =
   | MouseLeaveEvent
   | TabBlurEvent
   | TabFocusEvent
-  | MusicEndEvent;
+  | MusicEndEvent
+  | FullscreenChangeEvent;
 
 // Wraps whatever type you pass as RunEngineProps's Custom type parameter
 // — its shape is entirely up to you, unlike the built-in GameEvent
@@ -374,6 +382,18 @@ export type RunEngineFunction = <State, Custom = never>(
   // happened outside the render loop (e.g. an async fetch resolving)
   // back into it. Call from anywhere, not just from within nextState.
   sendEvent: (event: Custom) => void;
+  // Requests fullscreen on the canvas. Exposed here rather than as
+  // something triggerable from a NextStateFunction because the Fullscreen
+  // API only grants a request made synchronously within a user gesture
+  // (e.g. a click handler) — call it from your own listener on whatever
+  // element triggers it (a "Fullscreen" button, a keybind, ...). Rejects
+  // if the browser refuses (already-fullscreen edge cases, permission
+  // policy, etc.) — safe to leave uncaught if you don't need to handle
+  // that. Listen for FullscreenChangeEvent to react to the actual result.
+  requestFullscreen: () => Promise<void>;
+  // Exits fullscreen, however it was entered. A no-op (resolved promise)
+  // if nothing is currently fullscreen.
+  exitFullscreen: () => Promise<void>;
 }>;
 
 export const keyboardKeys = [
