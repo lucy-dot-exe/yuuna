@@ -422,24 +422,23 @@ function setAutoReloadButtonState(state) {
 }
 
 // Compiles every file in the current project, strips each one's
-// import/export statements, orders them so a file always comes
+// import/export statements, and orders them so a file always comes
 // after whatever it locally imports (a topological sort over each
 // file's own "./x" imports — re-run on every edit, so reordering a
 // file's imports re-orders execution instead of needing a
-// hardcoded order), and evals the concatenation as one script.
-// That's safe specifically because everything ends up sharing one
-// scope: a cross-file reference like spawnFood() just becomes an
-// ordinary JS variable reference once both files' code is in the
-// same eval. Single-file examples go through the exact same path —
-// with no imports to strip or order, it's a no-op down to today's
-// "compile the one file, eval it" behavior.
-async function updatePreview() {
-  setAutoReloadButtonState(false);
-
-  if (currentProject === null) {
-    return;
-  }
-
+// hardcoded order), returning the concatenation as one script. That's
+// safe to eval as-is specifically because everything ends up sharing
+// one scope: a cross-file reference like spawnFood() just becomes an
+// ordinary JS variable reference once both files' code is in the same
+// script. Single-file examples go through the exact same path — with
+// no imports to strip or order, it's a no-op down to today's "compile
+// the one file" behavior.
+//
+// Shared by updatePreview() (which evals it to drive the live canvas
+// above) and downloadAsDesktopApp() (which embeds it, unmodified, into
+// the exported Neutralino project's index.html) — one description of
+// this pipeline instead of two copies that could drift.
+async function compileProjectScript() {
   const worker = await monaco.languages.typescript.getTypeScriptWorker();
 
   const sourceByFile = {};
@@ -455,7 +454,17 @@ async function updatePreview() {
   }
 
   const order = topoSortFiles(currentProject.files, sourceByFile);
-  const script = order.map((file) => stripModuleSyntax(compiledByFile[file])).join("\n\n");
+  return order.map((file) => stripModuleSyntax(compiledByFile[file])).join("\n\n");
+}
+
+async function updatePreview() {
+  setAutoReloadButtonState(false);
+
+  if (currentProject === null) {
+    return;
+  }
+
+  const script = await compileProjectScript();
 
   try {
     eval(script);
@@ -506,4 +515,182 @@ function stripModuleSyntax(code) {
   return code
     .replace(/^\s*import\s[^;]*;/gm, "") // dropped — every file shares one scope once concatenated
     .replace(/^export\s+/gm, ""); // top-level declarations just become plain consts/functions
+}
+
+// Pinned to the currently published yuuna-engine version — bump this
+// alongside package.json's version on each release, the same upkeep
+// templates/blank's CDN-pinned quick start already takes on.
+const DESKTOP_EXPORT_YUUNA_VERSION = "0.5.0";
+
+// Packages the current project into a downloadable Neutralino
+// (https://neutralino.js.org) desktop app project — not an actual
+// compiled binary, since producing one needs `neu update` to fetch
+// platform binaries, which can't happen from a static page. What's
+// zipped up is everything `neu run`/`neu build` need once unpacked: a
+// neutralino.config.json, the compiled game as a plain resources/
+// index.html (the exact same script compileProjectScript() already
+// produces for the live preview above, just loaded via an ESM import of
+// yuuna-engine instead of eval'd against this page's bundle.js global),
+// and a README with the commands to run it.
+async function downloadAsDesktopApp() {
+  if (currentProject === null) {
+    return;
+  }
+
+  const button = document.getElementById("downloadDesktopButton");
+  const originalLabel = button.innerHTML;
+  button.disabled = true;
+  button.textContent = "Packaging...";
+
+  try {
+    const script = await compileProjectScript();
+
+    // Best-effort — yuuna.png is the one asset actually committed to
+    // this repo (see the root .gitignore's exception for it); everything
+    // else under dist/resources/ is real art/audio that may not even be
+    // present here. Falls back to no icon rather than failing the export.
+    const iconBlob = await fetch("./resources/yuuna.png")
+      .then((res) => (res.ok ? res.blob() : null))
+      .catch(() => null);
+
+    const zip = new JSZip();
+    zip.file("neutralino.config.json", buildNeutralinoConfig(currentProject, iconBlob !== null));
+    zip.file("resources/index.html", buildDesktopIndexHtml(currentProject, script, iconBlob !== null));
+    zip.file("README.md", buildDesktopReadme(currentProject));
+
+    if (iconBlob !== null) {
+      zip.file("resources/yuuna.png", iconBlob);
+    }
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${currentProject.id}-desktop.zip`;
+    link.click();
+
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Failed to package the desktop app:", error);
+    alert("Something went wrong packaging the desktop app — see the console for details.");
+  } finally {
+    button.disabled = false;
+    button.innerHTML = originalLabel;
+  }
+}
+
+function buildNeutralinoConfig(project, hasIcon) {
+  return JSON.stringify(
+    {
+      applicationId: `engine.yuuna.playground.${project.id}`,
+      version: "1.0.0",
+      defaultMode: "window",
+      port: 0,
+      documentRoot: "/resources/",
+      url: "/",
+      enableServer: true,
+      enableNativeAPI: true,
+      modes: {
+        window: {
+          title: project.label,
+          width: 1000,
+          height: 800,
+          minWidth: 400,
+          minHeight: 300,
+          // JSON.stringify drops a key entirely when its value is
+          // undefined, so this just omits `icon` when there's none.
+          icon: hasIcon ? "/resources/yuuna.png" : undefined,
+          exitProcessOnClose: true,
+        },
+      },
+      cli: {
+        binaryName: project.id,
+        resourcesPath: "/resources/",
+        extensionsPath: "/extensions/",
+        clientLibrary: "/resources/neutralino.js",
+        binaryVersion: "5.4.0",
+        clientVersion: "5.4.0",
+      },
+    },
+    null,
+    2
+  );
+}
+
+function buildDesktopIndexHtml(project, script, hasIcon) {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>${project.label}</title>
+    ${hasIcon ? '<link rel="icon" href="./yuuna.png" />' : ""}
+    <style>
+      body {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: #0d1831;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="yuuna"></canvas>
+
+    <!-- Same compiled script the live playground preview runs, loaded
+         here via an ESM import of yuuna-engine instead of the bundle.js
+         global the playground page itself uses to run it — the compiled
+         code below only ever references the ambient Yuuna.runEngine(...)
+         global, so importing the whole module as "* as Yuuna" satisfies
+         that reference with no rewriting needed. -->
+    <script type="module">
+import * as Yuuna from "https://esm.sh/yuuna-engine@${DESKTOP_EXPORT_YUUNA_VERSION}";
+
+${script}
+    </script>
+
+    <!-- Only present once "neu update" has fetched it — see
+         neutralino.config.json's cli.clientLibrary and this project's
+         README.md. -->
+    <script src="./neutralino.js"></script>
+    <script>
+      if (typeof Neutralino !== "undefined") {
+        Neutralino.init();
+      }
+    </script>
+  </body>
+</html>
+`;
+}
+
+function buildDesktopReadme(project) {
+  return `# ${project.label} — desktop app
+
+Exported from the [Yuuna playground](https://lucy-dot-exe.github.io/yuuna/)
+as a [Neutralino](https://neutralino.js.org) project — everything needed to
+run this project's code as a native desktop window.
+
+## Run it
+
+\`\`\`sh
+npx @neutralinojs/neu update   # fetches the platform binaries + client library
+npx @neutralinojs/neu run      # launches it as a native window
+\`\`\`
+
+## Build a distributable
+
+\`\`\`sh
+npx @neutralinojs/neu build
+\`\`\`
+
+Binaries land in \`dist/\`.
+
+## Starting from scratch instead?
+
+See the [neutralino-desktop](https://github.com/lucy-dot-exe/yuuna/tree/main/templates/neutralino-desktop)
+template for a real TypeScript + Vite dev setup, rather than editing the
+plain \`resources/index.html\` this export produced by hand.
+`;
 }

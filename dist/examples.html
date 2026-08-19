@@ -274,6 +274,10 @@
     />
 
     <script src="https://unpkg.com/monaco-editor@0.30.1/min/vs/loader.js"></script>
+
+    <!-- Zips the exported Neutralino desktop app project client-side —
+         see downloadAsDesktopApp() in playground.js. -->
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   </head>
 
   <script src="./bundle.js"></script>
@@ -451,7 +455,7 @@
             "
           >
             <div style="margin: 5px 10px">Editor:</div>
-            <div class="hstack" style="margin-left: auto">
+            <div class="hstack gap-2" style="margin-left: auto">
               <select
                 id="exampleSelect"
                 class="form-select form-select-sm"
@@ -480,6 +484,15 @@
                   <option value="fullscreen">Fullscreen</option>
                 </optgroup>
               </select>
+              <button
+                type="button"
+                id="downloadDesktopButton"
+                class="btn btn-sm btn-outline-light text-nowrap"
+                title="Download this project as a Neutralino desktop app project"
+                onclick="downloadAsDesktopApp()"
+              >
+                <i class="bi bi-download"></i> Desktop App
+              </button>
             </div>
           </div>
 
