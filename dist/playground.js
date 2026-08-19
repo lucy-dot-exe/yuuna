@@ -537,6 +537,21 @@ async function downloadAsDesktopApp() {
     return;
   }
 
+  // JSZip loads from a CDN <script> tag in <head> (see index.html/
+  // examples.html) rather than being bundled — if that request was
+  // blocked (an ad blocker, an offline dev environment, ...) or the page
+  // was open before that tag existed, `JSZip` never gets defined. Caught
+  // here specifically so that shows up as a clear message instead of a
+  // raw "JSZip is not defined" ReferenceError out of the try block below.
+  if (typeof JSZip === "undefined") {
+    alert(
+      "Couldn't load JSZip from the CDN, so the desktop app can't be packaged. " +
+        "Try reloading the page — if that doesn't help, something (an ad blocker, " +
+        "a network policy, ...) is blocking cdn.jsdelivr.net."
+    );
+    return;
+  }
+
   const button = document.getElementById("downloadDesktopButton");
   const originalLabel = button.innerHTML;
   button.disabled = true;
