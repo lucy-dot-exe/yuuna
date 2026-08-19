@@ -726,6 +726,32 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
   canvas.addEventListener("keyup", handleKeyUp);
 
+  // mouseButton state (see NextStateProps.mouseButton) — a double-buffer
+  // exactly like keyboardState above, just for the primary mouse button.
+  let previousMouseButtonState = { isPressed: false };
+  const currentMouseButtonState = { isPressed: false };
+
+  const handleMouseDown = (event: MouseEvent) => {
+    // Left/primary button only — matching CLICK, which already only
+    // ever fires for it.
+    if (event.button === 0) {
+      currentMouseButtonState.isPressed = true;
+    }
+  };
+
+  canvas.addEventListener("mousedown", handleMouseDown);
+
+  const handleMouseUp = (event: MouseEvent) => {
+    if (event.button === 0) {
+      currentMouseButtonState.isPressed = false;
+    }
+  };
+
+  // On window rather than the canvas — so releasing the button after
+  // having dragged off the canvas while still holding it down still
+  // clears isPressed, instead of leaving it stuck true forever.
+  window.addEventListener("mouseup", handleMouseUp);
+
   const handleMouseMoveHover = (ev: MouseEvent) => {
     const mouse = getCanvasPosition(ev);
 
@@ -999,11 +1025,18 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
         }
       );
 
+      const mouseButton = {
+        isPressed: currentMouseButtonState.isPressed,
+        isJustPressed: currentMouseButtonState.isPressed && !previousMouseButtonState.isPressed,
+        isJustReleased: !currentMouseButtonState.isPressed && previousMouseButtonState.isPressed,
+      };
+
       for (const nextState of nextStateFns) {
         const result = nextState({
           state,
           event,
           keyboard,
+          mouseButton,
           playSound,
           playMusic,
           pauseMusic,
@@ -1198,6 +1231,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
     lastFrame = now;
     previousState.keyboardState = { ...currentState.keyboardState };
+    previousMouseButtonState = { ...currentMouseButtonState };
   }, 0);
 
   resetCanvas = () => {
@@ -1224,9 +1258,12 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     canvas.removeEventListener("click", handleClick);
     canvas.removeEventListener("keydown", handleKeyDown);
     canvas.removeEventListener("keyup", handleKeyUp);
+    canvas.removeEventListener("mousedown", handleMouseDown);
     canvas.removeEventListener("mousemove", handleMouseMoveHover);
     canvas.removeEventListener("mousemove", handleMouseMoveTracking);
     canvas.removeEventListener("mouseleave", handleMouseLeave);
+    // On window, not the canvas — see where it's added above for why.
+    window.removeEventListener("mouseup", handleMouseUp);
 
     // This one's on `document`, not the canvas — same reasoning as above,
     // just doubly true since `document` isn't even scoped to this canvas.

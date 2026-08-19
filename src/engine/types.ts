@@ -247,6 +247,18 @@ export type NextStateProps<State, Custom = never> = {
       isJustReleased: boolean;
     }
   >;
+  // The primary (left) mouse button's held state, mirroring `keyboard`
+  // exactly — for anything that needs "is it currently held", not just
+  // the single discrete CLICK a click produces (e.g. hold-to-fire).
+  // Distinct from a GameEvent's own `mouse`/`worldMouse` fields (the
+  // cursor's *position* at that event) — this is about the button
+  // itself, not where the pointer is. Only the primary button is
+  // tracked, matching how CLICK itself already only fires for it.
+  mouseButton: {
+    isPressed: boolean;
+    isJustPressed: boolean;
+    isJustReleased: boolean;
+  };
   // Plays a sound effect (by its id in RunEngineProps.sounds) as a
   // side effect of this call — call it from within a NextStateFunction,
   // e.g. `playSound("collect")` when a cookie is clicked. Playing the
