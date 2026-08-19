@@ -175,6 +175,10 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
       }>((resolve) => {
         const image = new Image();
 
+        // A single, unsliced image (1x1) if unset — only an actual
+        // spritesheet needs this declared.
+        const slices = value.slices ?? { horizontal: 1, vertical: 1 };
+
         // sheetSize is the whole loaded sheet's pixel dimensions — value's
         // declared `size` if set, otherwise whatever the image actually
         // measures once it's loaded (or DEFAULT_PLACEHOLDER_SIZE if even
@@ -184,10 +188,10 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
           resolve({
             image: loadedImage,
             size: {
-              width: sheetSize.width / value.slices.horizontal,
-              height: sheetSize.height / value.slices.vertical,
+              width: sheetSize.width / slices.horizontal,
+              height: sheetSize.height / slices.vertical,
             },
-            slices: value.slices,
+            slices,
             animations: value.animations ?? {},
           });
         };

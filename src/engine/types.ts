@@ -314,7 +314,9 @@ export type RunEngineProps<State, Custom = never> = {
       // the sheet might load as a placeholder (see runEngine.ts's
       // createPlaceholderSheet) before you know its real dimensions.
       size?: { width: number; height: number };
-      slices: { vertical: number; horizontal: number };
+      // Defaults to { horizontal: 1, vertical: 1 } — a single, unsliced
+      // image — if unset. Only needs setting for an actual spritesheet.
+      slices?: { vertical: number; horizontal: number };
       // Named animations for this spritesheet — reference one by name
       // from an ANIMATED_SPRITE renderable's `animation` field.
       animations?: Record<
