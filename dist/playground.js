@@ -208,6 +208,61 @@ async function openExample(id) {
   });
 })();
 
+// Uploaded assets — session-only object URLs for images/audio the user
+// drops in via the Assets panel, so a resources[id].src (or sounds/music
+// src) can point at real art without it being committed to examples/
+// resources/ or hosted anywhere. Kept as plain blob URLs rather than
+// persisted (e.g. IndexedDB) on purpose — this is a scratch playground,
+// not a project manager, and a blob URL already lives for as long as the
+// page itself does, i.e. the whole time the playground is actually open.
+let uploadedAssets = []; // { name, url }
+
+function onAssetFilesSelected(fileList) {
+  for (const file of fileList) {
+    const url = URL.createObjectURL(file);
+    uploadedAssets = uploadedAssets.filter((asset) => asset.name !== file.name);
+    uploadedAssets.push({ name: file.name, url });
+  }
+
+  renderAssetsPanel();
+}
+
+function copyAssetUrl(url, button) {
+  navigator.clipboard.writeText(url).then(() => {
+    const original = button.textContent;
+    button.textContent = "Copied!";
+    setTimeout(() => (button.textContent = original), 1200);
+  });
+}
+
+function renderAssetsPanel() {
+  const list = document.getElementById("assetsList");
+  list.innerHTML = "";
+
+  for (const asset of uploadedAssets) {
+    const item = document.createElement("div");
+    item.className = "asset-item";
+    item.innerHTML = `
+      <span class="ts-badge" style="background: #6f42c1">A</span>
+      <span class="asset-name" title="${asset.name}">${asset.name}</span>
+      <button type="button" class="btn btn-sm btn-outline-light asset-copy">Copy path</button>
+    `;
+    item.querySelector(".asset-copy").onclick = (event) => copyAssetUrl(asset.url, event.target);
+    list.appendChild(item);
+  }
+}
+
+(function setupAssetsPanel() {
+  const button = document.getElementById("uploadAssetButton");
+  const input = document.getElementById("assetFileInput");
+
+  button.addEventListener("click", () => input.click());
+  input.addEventListener("change", (event) => {
+    onAssetFilesSelected(event.target.files);
+    input.value = ""; // lets re-selecting the same file fire "change" again
+  });
+})();
+
 require.config({
   paths: { vs: "https://unpkg.com/monaco-editor@0.30.1/min/vs" },
 });
@@ -327,7 +382,10 @@ function closeTab(file, event) {
 }
 
 function renderExplorer() {
-  const sidebar = document.getElementById("fileSidebar");
+  // Targets #fileList rather than the whole #fileSidebar — the sidebar
+  // also holds the Assets section (see setupAssetsPanel below), which
+  // shouldn't be wiped out every time the project's file list re-renders.
+  const sidebar = document.getElementById("fileList");
   sidebar.innerHTML = `<div class="folder-label">${currentProject.label.toUpperCase()}</div>`;
 
   for (const file of currentProject.files) {
