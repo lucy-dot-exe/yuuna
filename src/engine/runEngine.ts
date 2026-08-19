@@ -72,6 +72,13 @@ const createPlaceholderSheet = (size: { width: number; height: number }): HTMLCa
   return canvas;
 };
 
+// Used only when a resource declares neither `size` (see settle() below)
+// nor actually loads — there's no image to measure and nothing declared
+// to fall back to, so there's no way to know the intended dimensions at
+// all. An arbitrary, small-but-visible size, purely so the placeholder
+// still draws as *something* instead of a 0x0/NaN canvas.
+const DEFAULT_PLACEHOLDER_SIZE = { width: 64, height: 64 };
+
 export const runEngine: RunEngineFunction = async <State, Custom = never>(
   props: RunEngineProps<State, Custom>
 ) => {
@@ -168,12 +175,17 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
       }>((resolve) => {
         const image = new Image();
 
-        const settle = (loadedImage: CanvasImageSource) => {
+        // sheetSize is the whole loaded sheet's pixel dimensions — value's
+        // declared `size` if set, otherwise whatever the image actually
+        // measures once it's loaded (or DEFAULT_PLACEHOLDER_SIZE if even
+        // that isn't available, i.e. no `size` declared *and* the image
+        // failed to load too).
+        const settle = (loadedImage: CanvasImageSource, sheetSize: { width: number; height: number }) => {
           resolve({
             image: loadedImage,
             size: {
-              width: value.size.width / value.slices.horizontal,
-              height: value.size.height / value.slices.vertical,
+              width: sheetSize.width / value.slices.horizontal,
+              height: sheetSize.height / value.slices.vertical,
             },
             slices: value.slices,
             animations: value.animations ?? {},
@@ -181,12 +193,16 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
         };
 
         image.src = value.src;
-        image.onload = () => settle(image);
+        image.onload = () =>
+          settle(image, value.size ?? { width: image.naturalWidth, height: image.naturalHeight });
         // Missing/failed-to-load asset (see .gitignore's dist/resources/
         // note) — a placeholder sheet, sized to match what this resource
         // declared, keeps every frame/slice/animation index the example
         // already computes valid instead of drawing nothing or throwing.
-        image.onerror = () => settle(createPlaceholderSheet(value.size));
+        image.onerror = () => {
+          const placeholderSize = value.size ?? DEFAULT_PLACEHOLDER_SIZE;
+          settle(createPlaceholderSheet(placeholderSize), placeholderSize);
+        };
       })
   );
 

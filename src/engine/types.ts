@@ -306,7 +306,14 @@ export type RunEngineProps<State, Custom = never> = {
     string,
     {
       src: string;
-      size: { width: number; height: number };
+      // Defaults to the loaded image's own dimensions if unset — the
+      // common case (one sprite, not a sheet, or a sheet where whatever
+      // exported it can be trusted to match the source art exactly).
+      // Still worth setting explicitly when you want the engine to catch
+      // a mismatch (e.g. size doesn't evenly divide by slices below) or
+      // the sheet might load as a placeholder (see runEngine.ts's
+      // createPlaceholderSheet) before you know its real dimensions.
+      size?: { width: number; height: number };
       slices: { vertical: number; horizontal: number };
       // Named animations for this spritesheet — reference one by name
       // from an ANIMATED_SPRITE renderable's `animation` field.
