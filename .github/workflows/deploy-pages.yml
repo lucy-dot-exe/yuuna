@@ -24,6 +24,13 @@ jobs:
           node-version: 20
       - run: yarn install --frozen-lockfile
       - run: yarn build
+      - name: Download private playground assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download playground-assets --repo lucy-dot-exe/yuuna --pattern playground-resources.zip --output resources.zip
+          unzip -o resources.zip -d dist/resources
+          rm resources.zip
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
