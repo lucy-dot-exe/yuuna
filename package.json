@@ -39,7 +39,9 @@
   "scripts": {
     "build": "node scripts/generate-playground-assets.mjs && rollup -c",
     "watch": "node scripts/generate-playground-assets.mjs && rollup -c -w",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "sync-assets": "node scripts/sync-playground-assets.mjs",
+    "postinstall": "node -e \"const fs=require('fs');try{if(fs.existsSync('.githooks')&&fs.existsSync('.git')){require('child_process').execSync('git config core.hooksPath .githooks')}}catch(e){}\""
   },
   "devDependencies": {
     "nodemon": "^3.1.0",
