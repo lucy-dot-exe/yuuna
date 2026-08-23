@@ -6,12 +6,11 @@
 
 [Live demo & playground](https://lucy-dot-exe.github.io/yuuna/) · [GitHub](https://github.com/lucy-dot-exe/yuuna)
 
-A lightweight, state-machine-based TypeScript game engine built for quick
-prototypes — drop it into a page and it's running, no editor or build step
-required. You describe your game as a `state`, a `render(state)` function,
-and a `nextState({ state, event, keyboard })` function — Yuuna owns the
-render loop, input handling, and canvas drawing. It's scratch paper for game
-ideas, not a replacement for Godot or Unity.
+A lightweight, state-machine-based TypeScript game engine — drop it into a
+page and it's running, no editor or build step required. You describe your
+game as a `state`, a `render(state)` function, and a
+`nextState({ state, event, keyboard })` function — Yuuna owns the render
+loop, input handling, and canvas drawing.
 
 ## Install
 
@@ -109,7 +108,7 @@ hand? Grab one from [`templates/`](templates):
   (via Vite), for a real local project.
 - **[neutralino-desktop](templates/neutralino-desktop)** — the `npm`
   template wrapped in [Neutralino](https://neutralino.js.org) to run as a
-  native desktop window instead of a browser tab.
+  native desktop window.
 
 ```sh
 npx degit lucy-dot-exe/yuuna/templates/blank my-game
