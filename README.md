@@ -120,6 +120,11 @@ npx degit lucy-dot-exe/yuuna/templates/blank my-game
 its git history — no cloning or forking the whole engine repo needed.
 Each template's own README has more on running it once copied.
 
+## Made with Yuuna
+
+- **[Yuuna's Heroes](https://lucinaexe.itch.io/yuunas-td)** — a game made
+  using Yuuna.
+
 ## Development
 
 ```sh
