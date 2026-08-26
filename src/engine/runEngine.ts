@@ -114,9 +114,43 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     canvas.style.backgroundColor = props.canvas.backgroundColor;
   }
 
+  // The canvas's *logical* resolution — the fixed space every renderable
+  // position, and every mouse/touch coordinate, is expressed in. Captured
+  // here, before pixelRatio (below) scales the actual backing buffer past
+  // it, so both stay anchored to this regardless of what pixelRatio does.
+  const logicalWidth = canvas.width;
+  const logicalHeight = canvas.height;
+
+  // Scales the backing buffer beyond logicalWidth/logicalHeight so text
+  // and vector shapes (fillText, arc, ...) render crisply on a HiDPI
+  // screen — most phones — instead of the same logical-resolution buffer
+  // just being stretched larger by applyResize below. `true` follows the
+  // display's own devicePixelRatio; a number sets it explicitly; leaving
+  // this unset keeps today's 1x behavior. Sprites are unaffected either
+  // way — imageSmoothingEnabled stays false below regardless — so pixel
+  // art has no reason to turn this on.
+  const pixelRatio = props.canvas?.pixelRatio === true ? window.devicePixelRatio || 1 : props.canvas?.pixelRatio ?? 1;
+
+  if (pixelRatio !== 1) {
+    // Resizing the backing buffer resets the 2D context's transform (and
+    // everything else about its state), so context.scale below has to
+    // come after this, not before.
+    canvas.width = logicalWidth * pixelRatio;
+    canvas.height = logicalHeight * pixelRatio;
+    canvas.style.width = `${logicalWidth}px`;
+    canvas.style.height = `${logicalHeight}px`;
+    context.scale(pixelRatio, pixelRatio);
+  }
+
   // Make the canvas focusable so keyboard input is scoped to it instead of
   // leaking to the rest of the page (e.g. arrow keys scrolling the window).
   canvas.tabIndex = 0;
+
+  // Stops the browser from treating a drag/pinch on the canvas as page
+  // scroll/zoom — backs up the touchstart/touchmove preventDefault calls
+  // below for gestures (e.g. a pinch starting on the canvas) preventDefault
+  // alone doesn't reliably stop.
+  canvas.style.touchAction = "none";
 
   // Resizes the *display* size only (CSS width/height) — canvas.width/
   // height above stays the fixed logical resolution every renderable's
@@ -659,8 +693,22 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   // the same conversion to line up.
   const getCanvasPosition = (ev: MouseEvent): Position => {
     return {
-      x: (ev.offsetX * canvas.width) / canvas.clientWidth,
-      y: (ev.offsetY * canvas.height) / canvas.clientHeight,
+      x: (ev.offsetX * logicalWidth) / canvas.clientWidth,
+      y: (ev.offsetY * logicalHeight) / canvas.clientHeight,
+    };
+  };
+
+  // Touch's equivalent of getCanvasPosition — a Touch has no offsetX/Y
+  // (that's a MouseEvent-only convenience), so this gets there manually
+  // via getBoundingClientRect instead. clientX/Y and the rect are both
+  // viewport-relative, so their difference stays correct regardless of
+  // page scroll.
+  const getTouchPosition = (touch: Touch): Position => {
+    const rect = canvas.getBoundingClientRect();
+
+    return {
+      x: ((touch.clientX - rect.left) * logicalWidth) / canvas.clientWidth,
+      y: ((touch.clientY - rect.top) * logicalHeight) / canvas.clientHeight,
     };
   };
 
@@ -673,9 +721,11 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   let lastFrame: number = Date.now();
   let hoveredId: string | null = null;
 
-  const handleClick = (ev: MouseEvent) => {
-    const mouse: Position = getCanvasPosition(ev);
-
+  // Shared by the mouse "click" listener and the touch handlers below —
+  // firing a CLICK is the same "is whatever's currently hovered
+  // isClickable" check either way; only how `mouse` was determined
+  // differs (a real click event vs. a lifted finger).
+  const fireClick = (mouse: Position) => {
     if (hoveredId === null) return;
 
     const { renderables, camera } = renderState(state);
@@ -686,6 +736,8 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
       events.push({ tag: "CLICK", id: hovered.id, mouse, worldMouse: toWorldPosition(mouse, camera) });
     }
   };
+
+  const handleClick = (ev: MouseEvent) => fireClick(getCanvasPosition(ev));
 
   canvas.addEventListener("click", handleClick);
 
@@ -752,9 +804,13 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   // clears isPressed, instead of leaving it stuck true forever.
   window.addEventListener("mouseup", handleMouseUp);
 
-  const handleMouseMoveHover = (ev: MouseEvent) => {
-    const mouse = getCanvasPosition(ev);
-
+  // Shared by mousemove and the touch handlers below — updates hoveredId
+  // from a canvas position and fires HOVER_IN/HOVER_OUT as whatever's
+  // underneath it changes. Touch has no ambient hover the way a mouse
+  // does (nothing is "hovered" until a finger actually touches down), but
+  // feeding a touch's position through this the same as the mouse's is
+  // what lets an isHoverable renderable react to a tap/drag at all.
+  const updateHover = (mouse: Position) => {
     const { renderables, camera } = renderState(state);
     const worldMouse = toWorldPosition(mouse, camera);
 
@@ -777,11 +833,11 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     hoveredId = hovered === undefined ? null : hovered.id ?? null;
   };
 
+  const handleMouseMoveHover = (ev: MouseEvent) => updateHover(getCanvasPosition(ev));
+
   canvas.addEventListener("mousemove", handleMouseMoveHover);
 
-  const handleMouseMoveTracking = (ev: MouseEvent) => {
-    const mouse = getCanvasPosition(ev);
-
+  const updateTracking = (mouse: Position) => {
     if (hoveredId === null) {
       return;
     }
@@ -795,15 +851,19 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     }
   };
 
+  const handleMouseMoveTracking = (ev: MouseEvent) => updateTracking(getCanvasPosition(ev));
+
   canvas.addEventListener("mousemove", handleMouseMoveTracking);
 
   // No further mousemove fires once the mouse is off the canvas, so this
   // is also the only chance to report a HOVER_OUT for whatever was
   // hovered when it left — otherwise that hover would just dangle,
   // never explicitly ended.
-  const handleMouseLeave = (ev: MouseEvent) => {
-    const mouse = getCanvasPosition(ev);
-
+  // Shared by mouseleave and the touch handlers below — clears whatever's
+  // hovered (firing HOVER_OUT for it) without a HOVER_IN taking its
+  // place. Returns worldMouse so callers that need it (MOUSE_LEAVE below)
+  // don't have to call renderState() a second time just to get it.
+  const clearHover = (mouse: Position) => {
     const { renderables, camera } = renderState(state);
     const worldMouse = toWorldPosition(mouse, camera);
 
@@ -816,10 +876,96 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     }
 
     hoveredId = null;
+    return worldMouse;
+  };
+
+  const handleMouseLeave = (ev: MouseEvent) => {
+    const mouse = getCanvasPosition(ev);
+    const worldMouse = clearHover(mouse);
+
     events.push({ tag: "MOUSE_LEAVE", mouse, worldMouse });
   };
 
   canvas.addEventListener("mouseleave", handleMouseLeave);
+
+  // Translates touch into the same HOVER_IN/HOVER_OUT/MOUSE_MOVE/CLICK
+  // events mouse input already produces (via updateHover/updateTracking/
+  // fireClick/clearHover above), so existing game code written against
+  // those events works on a touchscreen with no changes of its own.
+  // Single-touch only — touches[0]/changedTouches[0] — the same "one
+  // active pointer" model mouse input already assumes; a second finger is
+  // ignored rather than tracked as its own pointer.
+  //
+  // preventDefault on start/move keeps a drag/tap on the canvas from also
+  // scrolling, pinch-zooming, or triggering pull-to-refresh — the browser
+  // gestures a touchscreen normally reserves that space for; { passive:
+  // false } is what makes preventDefault actually take effect here.
+  const handleTouchStart = (ev: TouchEvent) => {
+    ev.preventDefault();
+
+    const touch = ev.touches[0];
+    if (touch === undefined) return;
+
+    currentMouseButtonState.isPressed = true;
+
+    const mouse = getTouchPosition(touch);
+    updateHover(mouse);
+    updateTracking(mouse);
+  };
+
+  canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+
+  const handleTouchMove = (ev: TouchEvent) => {
+    ev.preventDefault();
+
+    const touch = ev.touches[0];
+    if (touch === undefined) return;
+
+    const mouse = getTouchPosition(touch);
+    updateHover(mouse);
+    updateTracking(mouse);
+  };
+
+  canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+
+  // A lifted finger both releases (mirroring mouseup) and clicks
+  // (mirroring the browser's own click-after-mouseup) — touch has no
+  // separate "up" and "click" events of its own the way mouse does, so
+  // both happen here together, in that order. hover is updated once more
+  // first so a plain tap (touchstart immediately followed by touchend,
+  // with no touchmove between them to have already done this) still
+  // fires CLICK against whatever's actually under it; hover is then
+  // cleared, since nothing's left touching it once the finger lifts.
+  const handleTouchEnd = (ev: TouchEvent) => {
+    ev.preventDefault();
+
+    currentMouseButtonState.isPressed = false;
+
+    const touch = ev.changedTouches[0];
+    if (touch === undefined) return;
+
+    const mouse = getTouchPosition(touch);
+    updateHover(mouse);
+    fireClick(mouse);
+    clearHover(mouse);
+  };
+
+  canvas.addEventListener("touchend", handleTouchEnd, { passive: false });
+
+  // A cancelled touch (e.g. an incoming call interrupting the page, or
+  // the OS deciding it's a system gesture instead) never fires touchend —
+  // handled the same as lifting the finger, minus the click, since
+  // there's no tap to speak of once the touch itself has been cancelled.
+  const handleTouchCancel = (ev: TouchEvent) => {
+    currentMouseButtonState.isPressed = false;
+
+    const touch = ev.changedTouches[0];
+    if (touch === undefined) return;
+
+    clearHover(getTouchPosition(touch));
+  };
+
+  canvas.addEventListener("touchcancel", handleTouchCancel, { passive: false });
 
   // Tab switches are a document-level concern (visibilitychange), not
   // something that ever reaches the canvas itself the way mouse/keyboard
@@ -1060,7 +1206,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
     events.splice(0, events.length);
 
-    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.clearRect(0, 0, logicalWidth, logicalHeight);
 
     const { cursor, renderables } = renderState(state);
 
@@ -1262,6 +1408,10 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     canvas.removeEventListener("mousemove", handleMouseMoveHover);
     canvas.removeEventListener("mousemove", handleMouseMoveTracking);
     canvas.removeEventListener("mouseleave", handleMouseLeave);
+    canvas.removeEventListener("touchstart", handleTouchStart);
+    canvas.removeEventListener("touchmove", handleTouchMove);
+    canvas.removeEventListener("touchend", handleTouchEnd);
+    canvas.removeEventListener("touchcancel", handleTouchCancel);
     // On window, not the canvas — see where it's added above for why.
     window.removeEventListener("mouseup", handleMouseUp);
 

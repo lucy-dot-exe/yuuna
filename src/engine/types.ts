@@ -387,6 +387,19 @@ export type RunEngineProps<State, Custom = never> = {
     // Left as a caller choice rather than an engine default since it's a
     // real visual trade-off specific to each game.
     resize?: "none" | "fit" | "stretch";
+    // Scales the canvas's backing buffer beyond width/height, without
+    // changing any renderable's coordinate space — every position in
+    // render() (and every mouse/touch coordinate) stays expressed in
+    // logical width/height pixels; this only changes how many actual
+    // device pixels each of those logical pixels covers on screen. `true`
+    // follows the display's own devicePixelRatio — most phones and other
+    // HiDPI screens are 2 or 3 — for crisper text and vector shapes
+    // (fillText, arc, ...) than the same logical-resolution buffer just
+    // being stretched larger; a number sets it explicitly. Leaving this
+    // unset keeps today's 1x behavior. Sprites are unaffected either way
+    // (they're always drawn without smoothing), so pixel art has no
+    // reason to turn this on.
+    pixelRatio?: number | true;
   };
   // Pans/zooms every world-space renderable (anything without
   // screenSpace: true) as a group — { x, y } is the world position that
