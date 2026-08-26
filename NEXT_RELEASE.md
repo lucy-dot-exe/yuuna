@@ -3,11 +3,3 @@
   entry here becomes the next GitHub release's notes. Reset this file to
   empty right after publishing.
 -->
-
-- Added a factory function per renderable variant — `rectangle`/`circle`/`text`/`sprite`/`animatedSprite`/`line`/`group` (`Yuuna.sprite({...})` in the browser bundle, `import { sprite } from "yuuna-engine"` from npm) — so `render()` can build renderables without writing `{ type: "SPRITE", ... }` object literals by hand.
-- `resources[id].size` is now optional, defaulting to the loaded image's own dimensions — only needed explicitly if you want a mismatch caught, or the sheet might load as a placeholder before its real size is known.
-- `resources[id].slices` is now optional, defaulting to `{ horizontal: 1, vertical: 1 }` (a single, unsliced image) — only needed for an actual spritesheet.
-- SPRITE's `frame` is now optional, defaulting to 0 — no need to spell it out for a single-frame sprite (or the first frame of a sheet).
-- Added `mouseButton` to `nextState`'s props — `{ isPressed, isJustPressed, isJustReleased }` for the primary mouse button, mirroring `keyboard` exactly. Lets a mechanic react to a held-down button (e.g. hold-to-fire) directly, without bridging mousedown/mouseup through a custom event.
-- Added touch support — a tap/drag on the canvas now produces the same `CLICK`/`HOVER_IN`/`HOVER_OUT`/`MOUSE_MOVE` events (and drives `mouseButton`) that mouse input already does, so existing games work on a touchscreen with no changes of their own. The canvas also gets `touch-action: none` so a drag/tap no longer scrolls, pinch-zooms, or triggers pull-to-refresh.
-- Added `canvas.pixelRatio` to `runEngine`'s props — scales the canvas's backing buffer (`true` to follow the display's own `devicePixelRatio`, or a specific number) for crisper text and vector shapes on HiDPI screens, without changing the logical coordinate space any renderable position (or mouse/touch coordinate) is expressed in. Off by default, so pixel art is unaffected unless a game opts in.
