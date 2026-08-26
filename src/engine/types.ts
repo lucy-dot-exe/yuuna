@@ -410,6 +410,22 @@ export type RunEngineProps<State, Custom = never> = {
   // you're tracking yourself. Affects rendering and hit-testing, but not
   // the raw `mouse` on click/hover events — see worldMouse for that.
   camera?: (state: State) => { x: number; y: number; zoom: number };
+  // Globally scales the passage of simulated time — every TIME event's
+  // own `delta`, and every ANIMATED_SPRITE's own playback speed (on top
+  // of whatever that renderable's own `timeScale` already multiplies it
+  // by) — by this same factor, recomputed every tick from state so a
+  // game can drive it live (a speed-up/slow-motion control, a pause menu
+  // that still wants renderables drawn rather than the canvas frozen
+  // outright, ...) instead of only setting it once at boot. 0 freezes
+  // both game logic and animation playback in place, the same way an
+  // individual ANIMATED_SPRITE's own `paused: true` already freezes just
+  // that one sprite (see its own doc comment) — nothing here needs its
+  // own separate pause concept. Missing/undefined keeps today's 1x
+  // behavior. Doesn't touch anything else the engine measures in real
+  // time regardless of this (mouse/keyboard input, music/sfx playback,
+  // the interval driving the loop itself) — only the *simulated* passage
+  // of time this controls.
+  timeScale?: (state: State) => number;
 };
 
 export type RunEngineFunction = <State, Custom = never>(

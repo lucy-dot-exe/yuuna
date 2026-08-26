@@ -455,7 +455,12 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
     const resource = resourceById[renderable.resourceId];
     const animation = resource.animations[renderable.animation];
-    const timeScale = renderable.timeScale ?? 1;
+    // Composed with RunEngineProps.timeScale (currentTimeScale, set once
+    // per tick below) — this renderable's own speed multiplied by
+    // whatever the whole game's currently running at, so a global 2x/4x/
+    // stop control speeds up (or freezes) every animation right along
+    // with the rest of the simulation, not just movement/timers.
+    const timeScale = (renderable.timeScale ?? 1) * currentTimeScale;
     const paused = renderable.paused ?? false;
 
     const now = Date.now();
@@ -720,6 +725,15 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
   let lastFrame: number = Date.now();
   let hoveredId: string | null = null;
+
+  // How much this tick's simulated time is scaled by (see
+  // RunEngineProps.timeScale) — set once per tick, right before that
+  // tick's own TIME event delta is computed, and read again later the
+  // same tick by resolveAnimatedSprite (below) so a single number
+  // governs both game logic and animation playback consistently within
+  // one tick rather than each recomputing props.timeScale(state)
+  // separately (state may itself have just changed this same tick).
+  let currentTimeScale = 1;
 
   // Shared by the mouse "click" listener and the touch handlers below —
   // firing a CLICK is the same "is whatever's currently hovered
@@ -1153,7 +1167,15 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
   const intervalId = setInterval(() => {
     const now = Date.now();
-    const delta = now - lastFrame;
+    const rawDelta = now - lastFrame;
+
+    // Read from state as this tick starts (i.e. still last tick's own
+    // result) — resolveAnimatedSprite (below, during this same tick's
+    // render pass) reads this same currentTimeScale rather than calling
+    // props.timeScale itself, so a single value governs both the TIME
+    // event about to fire and every animation's playback consistently.
+    currentTimeScale = props.timeScale?.(state) ?? 1;
+    const delta = rawDelta * currentTimeScale;
 
     events.push({ tag: "TIME", delta: delta });
 
