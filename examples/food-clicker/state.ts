@@ -25,7 +25,7 @@ export const spawnIntervalFor = (combo: number) =>
 // its score/speed bonus) going; any slower and it resets back to 1.
 export const COMBO_WINDOW = 800;
 
-export const ROUND_DURATION = 30000; // milliseconds per run
+export const ROUND_DURATION = 15000; // milliseconds per run
 
 export const POPUP_DURATION = 600; // milliseconds a "+n" popup stays on screen
 export const POPUP_RISE = 40; // pixels a "+n" popup drifts upward over its lifetime
@@ -53,11 +53,6 @@ export type GameState = {
   // that catch always starts the combo at 1 rather than reading stale
   // state left over from a previous run (see spawnIntervalFor/COMBO_WINDOW).
   sinceLastCatch: number;
-
-  // isMusicStarted only tracks the one-time auto-start in nextState.ts;
-  // isMusicPlaying is the current on/off state the icon toggles
-  isMusicStarted: boolean;
-  isMusicPlaying: boolean;
 };
 
 export const initialState: GameState = {
@@ -74,9 +69,6 @@ export const initialState: GameState = {
   score: 0,
   combo: 0,
   sinceLastCatch: Infinity,
-
-  isMusicStarted: false,
-  isMusicPlaying: false,
 };
 
 const randomBetween = (min: number, max: number) => min + Math.random() * (max - min);

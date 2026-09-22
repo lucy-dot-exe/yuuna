@@ -83,7 +83,7 @@ Yuuna.runEngine<GameState>({
   // resourceId and pick a frame index into that grid.
   resources: {
     food: {
-      src: "./resources/food.png",
+      src: "./resources/pixel-food/food.png",
       size: { width: 128, height: 128 },
       slices: { horizontal: SHEET_COLUMNS, vertical: SHEET_ROWS },
     },

@@ -1,0 +1,11 @@
+Free Pixel Food!
+by Henry Software
+https://henrysoftware.itch.io/pixel-food
+
+License: CC0 1.0 Universal (public domain dedication)
+https://creativecommons.org/publicdomain/zero/1.0/
+Credited here by choice, not requirement.
+
+Used by the Food Clicker and Sprites examples
+(examples/food-clicker/main.ts, examples/sprites.ts):
+  food.png

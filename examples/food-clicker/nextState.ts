@@ -17,33 +17,10 @@ const ageAndExpire = <T extends { age: number }>(items: T[], delta: number, maxA
   items.map((item) => ({ ...item, age: item.age + delta })).filter((item) => item.age < maxAge);
 
 export const nextState: NextStateFunction<GameState> = (props) => {
-  // Starts the background music once, the first time nextState runs —
-  // playMusic() loops the track and keeps it running in the background
-  // from here on, independent of frame updates, phase, or clicks
-  if (!props.state.isMusicStarted) {
-    props.playMusic("theme");
-
-    return { ...props.state, isMusicStarted: true, isMusicPlaying: true };
-  }
-
-  // If the music icon is clicked, toggle it: pauseMusic() leaves it where
-  // it stopped, so a later playMusic() call picks back up instead of
-  // restarting the track
-  if (props.event.tag === "CLICK" && props.event.id === "music-toggle") {
-    if (props.state.isMusicPlaying) {
-      props.pauseMusic();
-    } else {
-      props.playMusic("theme");
-    }
-
-    return { ...props.state, isMusicPlaying: !props.state.isMusicPlaying };
-  }
-
-  // Title screen: Start begins a fresh round. Music's own state (above)
-  // is carried over rather than reset, so it keeps playing through.
+  // Title screen: Start begins a fresh round
   if (props.state.phase === "title") {
     if (props.event.tag === "CLICK" && props.event.id === "start-button") {
-      return { ...initialState, phase: "playing", isMusicStarted: true, isMusicPlaying: props.state.isMusicPlaying };
+      return { ...initialState, phase: "playing" };
     }
 
     return props.state;
@@ -61,15 +38,13 @@ export const nextState: NextStateFunction<GameState> = (props) => {
   // From here on, phase is "playing"
 
   // Catching a food: score it — more, the sooner it follows the last
-  // catch — play the collect sound, pop a "+n" where it was clicked, and
-  // remove the food so it can't be caught (or expire) again
+  // catch — pop a "+n" where it was clicked, and remove the food so it
+  // can't be caught (or expire) again
   if (props.event.tag === "CLICK" && props.event.id?.startsWith("food-")) {
     const clickedId = props.event.id;
     const { mouse } = props.event;
 
     const combo = props.state.sinceLastCatch < COMBO_WINDOW ? props.state.combo + 1 : 1;
-
-    props.playSound("collect");
 
     return {
       ...props.state,

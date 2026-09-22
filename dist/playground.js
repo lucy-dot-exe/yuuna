@@ -39,7 +39,7 @@ const EXAMPLES = [
     id: "food-clicker",
     label: "Food Clicker",
     category: "games",
-    description: "Beat the 30-second clock — catching food fast builds a combo that's worth more and spawns faster.",
+    description: "Beat the 15-second clock — catching food fast builds a combo that's worth more and spawns faster.",
   },
   {
     id: "platformer",

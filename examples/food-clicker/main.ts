@@ -16,18 +16,9 @@ Yuuna.runEngine<GameState>({
   // of 16x16 food icons, referenced by resourceId below
   resources: {
     food: {
-      src: "./resources/food.png",
+      src: "./resources/pixel-food/food.png",
       size: { width: 128, height: 128 },
       slices: { horizontal: 8, vertical: 8 },
     },
-  },
-
-  // Loads the collect sound effect and background music track, played by
-  // playSound("collect") and playMusic("theme")/pauseMusic() in nextState.ts
-  sounds: {
-    collect: { src: "./resources/collect.wav" },
-  },
-  music: {
-    theme: { src: "./resources/floating-dream.ogg" },
   },
 });

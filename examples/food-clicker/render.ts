@@ -2,15 +2,7 @@
 // Renderable comes from the engine's ambient types, same as in a single-file
 // example — only the cross-file pieces (constants, GameState) are imported
 
-import {
-  CANVAS_WIDTH,
-  CENTER,
-  FOOD_LIFETIME,
-  FOOD_SCALE,
-  GameState,
-  POPUP_DURATION,
-  POPUP_RISE,
-} from "./state";
+import { CENTER, FOOD_LIFETIME, FOOD_SCALE, GameState, POPUP_DURATION, POPUP_RISE } from "./state";
 
 type RenderFunction = (state: GameState) => { renderables: Renderable[] };
 
@@ -109,22 +101,6 @@ const playingScreen = (state: GameState): Renderable[] => [
 ];
 
 export const render: RenderFunction = (state) => {
-  // The music toggle stays up in every phase, title/game-over included
-  const musicToggle = Yuuna.text({
-    text: state.isMusicPlaying ? "⏸" : "▶",
-    color: "white",
-
-    isClickable: true,
-    id: "music-toggle",
-
-    position: { x: CANVAS_WIDTH - 30, y: 30 },
-
-    align: {
-      x: "right",
-      y: "middle",
-    },
-  });
-
   const screen =
     state.phase === "title"
       ? titleScreen()
@@ -132,5 +108,5 @@ export const render: RenderFunction = (state) => {
       ? gameOverScreen(state)
       : playingScreen(state);
 
-  return { renderables: [musicToggle, ...screen] };
+  return { renderables: screen };
 };
