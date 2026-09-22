@@ -1,8 +1,7 @@
 // Entry point — wires the pieces from the other files together and starts
 // the engine. This would be the file a multi-file playground runs.
 
-import { CANVAS_WIDTH, CANVAS_HEIGHT } from "./constants";
-import { GameState, initialState } from "./state";
+import { CANVAS_WIDTH, CANVAS_HEIGHT, GameState, initialState } from "./state";
 import { render } from "./render";
 import { nextState } from "./nextState";
 

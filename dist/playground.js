@@ -39,7 +39,7 @@ const EXAMPLES = [
     id: "food-clicker",
     label: "Food Clicker",
     category: "games",
-    description: "Click food as it spawns for points — sprites, a sound effect, and a fading “+1” popup.",
+    description: "Beat the 30-second clock — catching food fast builds a combo that's worth more and spawns faster.",
   },
   {
     id: "tower-defense",
