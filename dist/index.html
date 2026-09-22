@@ -376,6 +376,315 @@
       }
     </style>
 
+    <!-- #guide section styles — scoped under #guide so nothing here leaks
+         into the rest of the page (no bare body/h1/h2/* selectors). -->
+    <style>
+      #guide{
+        --bg: #0a0f1c;
+        --bg-2: #0d1831;
+        --panel: #121f3a;
+        --panel-2: #16274a;
+        --border: rgba(255,255,255,0.09);
+        --text: #eef3fb;
+        --muted: #93a5c8;
+        --accent: #5090ff;
+        --warm: #dd9c5e;
+        --green: #7ad197;
+        --code-bg: #0b0f18;
+        --code-border: rgba(255,255,255,0.08);
+        --code-text: #d7deeb;
+        --tok-kw: #ff8fc0;
+        --tok-str: #9fe08d;
+
+        background: var(--bg);
+        color: var(--text);
+        background-image:
+          radial-gradient(ellipse 900px 500px at 12% -10%, rgba(80,144,255,0.16), transparent 60%),
+          radial-gradient(ellipse 700px 500px at 105% 10%, rgba(221,156,94,0.10), transparent 55%);
+        border-radius: 18px;
+        padding-top: 28px;
+        padding-bottom: 8px;
+      }
+
+      #guide .eyebrow{
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      #guide .eyebrow.warm{ color: var(--warm); }
+      #guide .eyebrow::before{
+        content: "";
+        width: 16px;
+        height: 2px;
+        background: currentColor;
+        display: inline-block;
+      }
+
+      #guide .app{
+        display: flex;
+        flex-direction: column;
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 20px 16px 24px;
+        gap: 16px;
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
+      }
+
+      #guide .topbar{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4px 6px;
+      }
+      #guide .brand{
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      #guide .brand b{ color: var(--text); font-weight: 600; }
+      #guide .brand .dot{ width: 6px; height: 6px; border-radius: 50%; background: var(--warm); }
+      #guide .progress{
+        font-size: 12px;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        padding: 5px 10px;
+        border-radius: 999px;
+      }
+      #guide .progress b{ color: var(--text); }
+
+      #guide .viewport{
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scroll-behavior: smooth;
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        background: linear-gradient(180deg, var(--panel), var(--bg-2));
+        height: min(620px, 76vh);
+        scrollbar-width: none;
+      }
+      #guide .viewport::-webkit-scrollbar{ display: none; }
+
+      #guide .slide{
+        flex: 0 0 100%;
+        scroll-snap-align: start;
+        height: 100%;
+        overflow-y: auto;
+        padding: clamp(20px, 3.6vw, 44px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #guide .slide-inner{
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        width: 100%;
+        max-width: 760px;
+      }
+
+      #guide .slide h1{
+        font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+        text-wrap: balance;
+        margin: 0;
+        font-size: clamp(28px, 4.4vw, 44px);
+        line-height: 1.05;
+        color: var(--text);
+      }
+      #guide .slide h2{
+        font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+        text-wrap: balance;
+        margin: 0 0 4px;
+        font-size: clamp(20px, 2.6vw, 26px);
+        line-height: 1.1;
+        color: var(--text);
+      }
+
+      #guide .diagram-box{
+        width: 100%;
+        margin-top: 6px;
+      }
+      #guide .diagram-box svg{ display: block; width: 100%; height: auto; overflow: visible; }
+      #guide .diagram-box.w-cover{ max-width: 560px; }
+      #guide .diagram-box.w-note{ max-width: 260px; }
+      #guide .diagram-box.w-flow{ max-width: 480px; }
+      #guide .diagram-box.w-icon{ max-width: 92px; }
+      #guide .diagram-box.w-concept{ max-width: 440px; }
+
+      #guide .mini-caption{
+        margin-top: 12px;
+        font-family: "Kalam", cursive;
+        font-size: 14px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      #guide text{ font-family: "Kalam", cursive; user-select: none; }
+      #guide .mono-svg{ font-family: "IBM Plex Mono", ui-monospace, monospace !important; }
+
+      #guide .badge{
+        display: inline-block;
+        width: 230px;
+        margin: 14px auto 0;
+      }
+
+      #guide pre.code-chip{
+        margin: 16px auto 0;
+        padding: 12px 16px;
+        background: var(--code-bg);
+        border: 1px solid var(--code-border);
+        border-radius: 10px;
+        overflow-x: auto;
+        font-size: 12px;
+        line-height: 1.6;
+        color: var(--code-text);
+        text-align: left;
+        display: inline-block;
+        box-shadow: 0 16px 32px -20px rgba(0,0,0,0.6);
+      }
+      #guide pre.code-chip .kw{ color: var(--tok-kw); }
+      #guide pre.code-chip .st{ color: var(--tok-str); }
+
+      #guide .shot-frame{
+        position: relative;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: #05070c;
+        padding: 8px;
+        box-shadow: 0 24px 48px -26px rgba(0,0,0,0.7);
+        width: 100%;
+      }
+      #guide .shot-frame .bar{ display: flex; gap: 6px; padding: 3px 6px 8px; }
+      #guide .shot-frame .bar span{ width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.14); }
+      #guide .shot-frame .stack{ position: relative; }
+      #guide .shot-frame img{
+        display: block;
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.06);
+      }
+      #guide .shot-frame .anno{
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      #guide .shot-caption{
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      #guide .render-wrap{ max-width: 520px; margin: 8px auto 0; }
+
+      #guide .dual-shots{
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        width: 100%;
+        margin-top: 6px;
+      }
+      #guide .dual-shots .shot-frame{ flex: 1; min-width: 0; }
+      #guide .dual-shots .doodle{ flex: 0 0 auto; width: 110px; }
+      #guide .dual-shots .doodle svg{ display: block; width: 100%; height: auto; }
+
+      #guide .recap-row{
+        display: flex;
+        justify-content: center;
+        gap: clamp(18px, 5vw, 48px);
+        margin-top: 22px;
+        width: 100%;
+        flex-wrap: wrap;
+      }
+      #guide .recap-item{ display: flex; flex-direction: column; align-items: center; gap: 8px; width: 120px; }
+      #guide .recap-item .label{ font-family: "Manrope"; font-weight: 800; font-size: 15px; }
+      #guide .recap-item.s1 .label{ color: #bcd4ff; }
+      #guide .recap-item.s2 .label{ color: #ffe2bd; }
+      #guide .recap-item.s3 .label{ color: #bfe8c9; }
+
+      #guide .signature-row{
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 20px;
+      }
+      #guide .signature{
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
+        font-size: 13px;
+        color: var(--muted);
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 8px 18px;
+      }
+      #guide .signature b{ color: var(--text); font-weight: 600; }
+
+      #guide .controls{
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        padding-top: 2px;
+      }
+      #guide .nav-btn{
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--text);
+        font-size: 17px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+      }
+      #guide .nav-btn:hover{ background: var(--panel-2); border-color: rgba(80,144,255,0.4); }
+      #guide .nav-btn:active{ transform: scale(0.94); }
+      #guide .nav-btn:disabled{ opacity: 0.35; cursor: default; }
+      #guide .nav-btn:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px; }
+
+      #guide .dots{ display: flex; gap: 8px; }
+      #guide .dots button{
+        width: 8px; height: 8px; border-radius: 50%;
+        border: none; background: var(--border); cursor: pointer; padding: 0;
+        transition: background 0.15s ease, width 0.15s ease;
+      }
+      #guide .dots button:focus-visible{ outline: 2px solid var(--accent); outline-offset: 3px; }
+      #guide .dots button.active{ background: var(--accent); width: 22px; border-radius: 5px; }
+
+      #guide .hint{
+        text-align: center;
+        font-size: 11px;
+        color: var(--muted);
+        letter-spacing: 0.03em;
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
+      }
+
+      @media (max-width: 760px){
+        #guide .viewport{ height: min(720px, 84vh); }
+        #guide .dual-shots{ flex-direction: column; }
+        #guide .dual-shots .doodle{ width: 70px; transform: rotate(90deg); }
+        #guide .recap-row{ gap: 22px; }
+      }
+    </style>
+
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -392,6 +701,19 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
     />
+
+    <!-- Guide section (#guide) resources — Kalam/Manrope/IBM Plex Mono for
+         its hand-drawn diagrams, Rough.js to draw them. Loaded *before* the
+         Monaco loader below: Monaco's AMD `define()` shim makes Rough.js's
+         UMD wrapper register as an AMD module instead of setting
+         `window.rough` if it loads after an AMD loader is present. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Manrope:wght@700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/rough.js/3.1.0/rough.umd.js"></script>
 
     <script src="https://unpkg.com/monaco-editor@0.30.1/min/vs/loader.js"></script>
   </head>
@@ -443,6 +765,9 @@
             </li>
             <li class="nav-item">
               <a class="nav-link" href="#templates">Templates</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#guide">Guide</a>
             </li>
             <li class="nav-item">
               <a
@@ -542,6 +867,533 @@
         </div>
       </div>
     </div>
+
+    <div id="guide" class="container mt-5 mb-5">
+      <div style="padding: 0 clamp(4px, 2vw, 24px)">
+        <h2>How to model a game</h2>
+        <p class="text-body-secondary">
+          Every Yuuna game comes down to three things — a
+          <code>state</code>, a <code>nextState</code> function, and a
+          <code>render</code> function. This walkthrough builds that idea up
+          step by step, using
+          <a href="examples.html">Cookie Clicker</a> — Yuuna's smallest
+          example — as the running example.
+        </p>
+      </div>
+
+      <div class="app">
+        <header class="topbar">
+          <div class="brand"><span class="dot"></span><b>Yuuna</b> · modeling a game</div>
+          <div class="progress"><b id="guideProgressCur">1</b> / <span id="guideProgressTotal">9</span></div>
+        </header>
+
+        <div class="viewport" id="guideViewport">
+
+          <!-- Slide 1: Cover -->
+          <section class="slide">
+            <div class="slide-inner">
+              <div class="eyebrow">A Yuuna walkthrough</div>
+              <h1>State. Next state. Picture.</h1>
+              <div class="diagram-box w-cover">
+                <svg id="guideDgCover" viewBox="0 0 700 310"></svg>
+              </div>
+              <div class="badge"><svg id="guideDgBadge" viewBox="0 0 230 56"></svg></div>
+            </div>
+          </section>
+
+          <!-- Slide 2: Step 1, the idea -->
+          <section class="slide">
+            <div class="slide-inner">
+              <div class="eyebrow">Step 1 of 3</div>
+              <h2>Declare a GameState</h2>
+              <div class="diagram-box w-concept">
+                <svg id="guideDgConceptState" viewBox="0 0 480 230"></svg>
+              </div>
+              <div class="mini-caption">the smallest shape that describes what's on screen</div>
+              <div class="signature-row"><div class="signature">type <b>GameState</b> = { ... }</div></div>
+            </div>
+          </section>
+
+          <!-- Slide 3: Step 1, in cookie-clicker.ts -->
+          <section class="slide">
+            <div class="slide-inner">
+              <div class="eyebrow">Step 1 example</div>
+              <h2>Cookie Clicker's game state</h2>
+              <div class="diagram-box w-note">
+                <svg id="guideDgState" viewBox="0 0 320 230"></svg>
+              </div>
+              <pre class="code-chip"><span class="kw">type</span> GameState = { cookies: number };
+<span class="kw">const</span> initialState = { cookies: <span class="st">0</span> };</pre>
+              <div class="badge"><svg id="guideDgBadgeState" viewBox="0 0 230 56"></svg></div>
+            </div>
+          </section>
+
+          <!-- Slide 4: Step 2, the idea -->
+          <section class="slide">
+            <div class="slide-inner">
+              <div class="eyebrow warm">Step 2 of 3</div>
+              <h2>Declare a NextState function</h2>
+              <div class="diagram-box w-concept">
+                <svg id="guideDgConceptNext" viewBox="0 0 480 240"></svg>
+              </div>
+              <div class="mini-caption">given state + an event, what's next?</div>
+              <div class="signature-row"><div class="signature">the <b>nextState</b>(state, event) &rarr; state function</div></div>
+            </div>
+          </section>
+
+          <!-- Slide 5: Step 2, in cookie-clicker.ts -->
+          <section class="slide">
+            <div class="slide-inner">
+              <div class="eyebrow warm">Step 2 example</div>
+              <h2>Cookie Clicker's next state function</h2>
+              <div class="diagram-box w-flow">
+                <svg id="guideDgFlow" viewBox="0 0 640 450"></svg>
+              </div>
+              <div class="badge"><svg id="guideDgBadgeNext" viewBox="0 0 230 56"></svg></div>
+            </div>
+          </section>
+
+          <!-- Slide 6: Step 3, the idea -->
+          <section class="slide">
+            <div class="slide-inner">
+              <div class="eyebrow">Step 3 of 3</div>
+              <h2>Declare a render function</h2>
+              <div class="diagram-box w-concept">
+                <svg id="guideDgConceptRender" viewBox="0 0 480 230"></svg>
+              </div>
+              <div class="mini-caption">given a state, what do we draw?</div>
+              <div class="signature-row"><div class="signature">the <b>render</b>(state) &rarr; picture function</div></div>
+            </div>
+          </section>
+
+          <!-- Slide 7: Step 3, in cookie-clicker.ts -->
+          <section class="slide">
+            <div class="slide-inner">
+              <div class="eyebrow">Step 3 example</div>
+              <h2>Cookie Clicker's render function</h2>
+              <div class="render-wrap">
+                <div class="shot-frame">
+                  <div class="bar"><span></span><span></span><span></span></div>
+                  <div class="stack">
+                    <img src="guide/state-initial.png" alt="Cookie Clicker rendered at its initial state: a brown cookie and the label 0 cookies" />
+                    <svg class="anno" id="guideDgAnnotate" viewBox="0 0 960 541" preserveAspectRatio="xMidYMid meet"></svg>
+                  </div>
+                </div>
+                <div class="shot-caption">every shape traced back to one line of code</div>
+              </div>
+              <div class="badge"><svg id="guideDgBadgeRender" viewBox="0 0 230 56"></svg></div>
+            </div>
+          </section>
+
+          <!-- Slide 8: The loop, live -->
+          <section class="slide">
+            <div class="slide-inner">
+              <div class="eyebrow warm">See it work</div>
+              <h2>Same file, seven clicks later</h2>
+              <div class="dual-shots">
+                <div class="shot-frame">
+                  <div class="bar"><span></span><span></span><span></span></div>
+                  <img src="guide/state-initial.png" alt="0 cookies, before any clicks" />
+                  <div class="shot-caption">before</div>
+                </div>
+                <div class="doodle"><svg id="guideDgDoodle" viewBox="0 0 160 160"></svg></div>
+                <div class="shot-frame">
+                  <div class="bar"><span></span><span></span><span></span></div>
+                  <img src="guide/state-after-clicks.png" alt="7 cookies, after clicking the cookie seven times" />
+                  <div class="shot-caption">after</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Slide 9: Recap -->
+          <section class="slide">
+            <div class="slide-inner">
+              <div class="eyebrow">The shape of every Yuuna game</div>
+              <h1>State. Change. Picture.</h1>
+              <div class="recap-row">
+                <div class="recap-item s1">
+                  <div class="diagram-box w-icon"><svg id="guideDgIcon1" viewBox="0 0 100 100"></svg></div>
+                  <div class="label">state</div>
+                </div>
+                <div class="recap-item s2">
+                  <div class="diagram-box w-icon"><svg id="guideDgIcon2" viewBox="0 0 100 100"></svg></div>
+                  <div class="label">nextState</div>
+                </div>
+                <div class="recap-item s3">
+                  <div class="diagram-box w-icon"><svg id="guideDgIcon3" viewBox="0 0 100 100"></svg></div>
+                  <div class="label">render</div>
+                </div>
+              </div>
+              <div class="signature-row">
+                <div class="signature"><b>nextState</b>(state, event) &rarr; state</div>
+                <div class="signature"><b>render</b>(state) &rarr; picture</div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+        <nav class="controls">
+          <button class="nav-btn" id="guidePrevBtn" aria-label="Previous slide">&larr;</button>
+          <div class="dots" id="guideDots"></div>
+          <button class="nav-btn" id="guideNextBtn" aria-label="Next slide">&rarr;</button>
+        </nav>
+        <div class="hint">use the arrows, dots, or &larr; / &rarr; keys</div>
+      </div>
+    </div>
+
+    <script>
+    (function(){
+      var COL = {
+        accent: '#5090ff', warm: '#dd9c5e', green: '#7ad197', muted: '#7c8db3', text: '#eef3fb', dim: 'rgba(255,255,255,0.35)',
+        // Darker hachure fills for node interiors — strokes and labels stay
+        // at the bright colors above so text keeps enough contrast against
+        // the fill lines behind it.
+        accentFill: '#23375c', warmFill: '#5a4128', greenFill: '#254636', mutedFill: '#2e3b52', textFill: '#2a3346'
+      };
+      var NS = 'http://www.w3.org/2000/svg';
+
+      function text(svg, x, y, str, opts){
+        opts = opts || {};
+        var t = document.createElementNS(NS, 'text');
+        t.setAttribute('x', x); t.setAttribute('y', y);
+        t.setAttribute('text-anchor', opts.anchor || 'middle');
+        t.setAttribute('font-size', opts.size || 16);
+        t.setAttribute('font-weight', opts.weight || 400);
+        t.setAttribute('fill', opts.color || COL.text);
+        if (opts.mono) t.setAttribute('class', 'mono-svg');
+        if (opts.style) t.setAttribute('font-style', opts.style);
+        t.textContent = str;
+        svg.appendChild(t);
+        return t;
+      }
+
+      function arrow(rc, svg, x1, y1, x2, y2, opts){
+        opts = opts || {};
+        var o = { stroke: opts.stroke || COL.muted, strokeWidth: opts.width || 2.2, roughness: opts.roughness != null ? opts.roughness : 1.6 };
+        svg.appendChild(rc.line(x1, y1, x2, y2, o));
+        var ang = Math.atan2(y2 - y1, x2 - x1);
+        var len = opts.head || 11;
+        [ang + Math.PI - 0.42, ang + Math.PI + 0.42].forEach(function(a){
+          svg.appendChild(rc.line(x2, y2, x2 + len * Math.cos(a), y2 + len * Math.sin(a), o));
+        });
+      }
+
+      // A single line with arrowheads on both ends — one visual for "these two
+      // go back and forth", instead of two separate crossing arrows.
+      function biArrow(rc, svg, x1, y1, x2, y2, opts){
+        opts = opts || {};
+        var o = { stroke: opts.stroke || COL.muted, strokeWidth: opts.width || 2.4, roughness: opts.roughness != null ? opts.roughness : 1.7 };
+        svg.appendChild(rc.line(x1, y1, x2, y2, o));
+        var ang = Math.atan2(y2 - y1, x2 - x1);
+        var len = opts.head || 12;
+        [ang + Math.PI - 0.4, ang + Math.PI + 0.4].forEach(function(a){
+          svg.appendChild(rc.line(x2, y2, x2 + len * Math.cos(a), y2 + len * Math.sin(a), o));
+        });
+        [ang - 0.4, ang + 0.4].forEach(function(a){
+          svg.appendChild(rc.line(x1, y1, x1 + len * Math.cos(a), y1 + len * Math.sin(a), o));
+        });
+      }
+
+      function ready(fn){
+        if (document.readyState === 'complete' || document.readyState === 'interactive') fn();
+        else document.addEventListener('DOMContentLoaded', fn);
+      }
+
+      ready(function(){
+        if (!window.rough) return;
+
+        // --- Cover: state is the hub — nextState loops with it, render just watches it ---
+        (function(){
+          var svg = document.getElementById('guideDgCover');
+          var rc = rough.svg(svg);
+
+          // STATE — the hub, top center
+          svg.appendChild(rc.rectangle(255, 20, 190, 64, { stroke: COL.accent, strokeWidth: 2.6, roughness: 2, fill: COL.accentFill, fillStyle: 'hachure', fillWeight: 1, hachureGap: 7 }));
+          text(svg, 350, 58, 'STATE', { size: 23, weight: 700, color: COL.accent });
+
+          // Left: a two-way exchange with NEXT STATE — state changes, and loops back
+          svg.appendChild(rc.rectangle(15, 200, 220, 64, { stroke: COL.warm, strokeWidth: 2.4, roughness: 2, fill: COL.warmFill, fillStyle: 'hachure', fillWeight: 1, hachureGap: 7 }));
+          text(svg, 125, 236, 'NEXT STATE', { size: 20, weight: 700, color: COL.warm });
+          text(svg, 125, 284, '(state, event) → state', { size: 13, color: COL.muted, mono: true });
+
+          biArrow(rc, svg, 298, 96, 192, 188, { stroke: COL.warm, head: 14 });
+          text(svg, 180, 150, 'back and forth,', { size: 15, weight: 600, color: COL.warm, anchor: 'end' });
+          text(svg, 180, 172, 'on every event', { size: 15, weight: 600, color: COL.warm, anchor: 'end' });
+
+          // Right: a one-way projection to RENDER — watches state, never writes it back
+          svg.appendChild(rc.rectangle(465, 200, 220, 64, { stroke: COL.green, strokeWidth: 2.4, roughness: 2, fill: COL.greenFill, fillStyle: 'hachure', fillWeight: 1, hachureGap: 7 }));
+          text(svg, 575, 236, 'RENDER', { size: 20, weight: 700, color: COL.green });
+          text(svg, 575, 284, '(state) → picture', { size: 13, color: COL.muted, mono: true });
+
+          arrow(rc, svg, 400, 86, 515, 198, { stroke: COL.green });
+          text(svg, 505, 150, 'one-way,', { size: 15, weight: 600, color: COL.green, anchor: 'start' });
+          text(svg, 505, 172, 'every frame', { size: 15, weight: 600, color: COL.green, anchor: 'start' });
+        })();
+
+        // --- Badge: circled filename — reused on the cover and on every example slide ---
+        function drawBadge(id){
+          var svg = document.getElementById(id);
+          if (!svg) return;
+          var rc = rough.svg(svg);
+          svg.appendChild(rc.ellipse(115, 28, 220, 46, { stroke: COL.warm, strokeWidth: 1.6, roughness: 2.4, fill: 'none' }));
+          text(svg, 115, 34, 'cookie-clicker.ts', { size: 15, color: COL.warm, mono: true });
+        }
+        ['guideDgBadge', 'guideDgBadgeState', 'guideDgBadgeNext', 'guideDgBadgeRender'].forEach(drawBadge);
+
+        // --- Concept 1: distill a busy screen down to the few numbers that matter ---
+        (function(){
+          var svg = document.getElementById('guideDgConceptState');
+          var rc = rough.svg(svg);
+
+          svg.appendChild(rc.rectangle(25, 30, 150, 100, { stroke: COL.muted, strokeWidth: 2, roughness: 2, fill: 'none' }));
+          svg.appendChild(rc.line(100, 130, 100, 148, { stroke: COL.muted, strokeWidth: 2, roughness: 1.8 }));
+          svg.appendChild(rc.line(78, 150, 122, 150, { stroke: COL.muted, strokeWidth: 2, roughness: 1.8 }));
+          svg.appendChild(rc.circle(60, 62, 30, { stroke: COL.muted, strokeWidth: 1.6, roughness: 2, fill: COL.mutedFill, fillStyle: 'hachure', fillWeight: 0.8, hachureGap: 5 }));
+          svg.appendChild(rc.rectangle(90, 52, 30, 22, { stroke: COL.muted, strokeWidth: 1.6, roughness: 2, fill: COL.mutedFill, fillStyle: 'hachure', fillWeight: 0.8, hachureGap: 5 }));
+          svg.appendChild(rc.polygon([[128, 100], [150, 70], [170, 100]], { stroke: COL.muted, strokeWidth: 1.6, roughness: 2.2, fill: COL.mutedFill, fillStyle: 'hachure', fillWeight: 0.8, hachureGap: 5 }));
+          svg.appendChild(rc.line(45, 114, 150, 114, { stroke: COL.muted, strokeWidth: 1.4, roughness: 2.4 }));
+
+          arrow(rc, svg, 195, 80, 295, 80, { stroke: COL.muted });
+
+          svg.appendChild(rc.rectangle(305, 30, 150, 100, { stroke: COL.accent, strokeWidth: 2.4, roughness: 2, fill: COL.accentFill, fillStyle: 'hachure', fillWeight: 1, hachureGap: 7 }));
+          text(svg, 380, 55, 'STATE', { size: 18, weight: 700, color: COL.accent });
+          [[325, 82, 60], [325, 102, 90], [325, 122, 45]].forEach(function(l){
+            svg.appendChild(rc.line(l[0], l[1], l[0] + l[2], l[1], { stroke: COL.accent, strokeWidth: 2, roughness: 1.8 }));
+          });
+        })();
+
+        // --- Concept 2: state + event, run through your rule, becomes the next state ---
+        (function(){
+          var svg = document.getElementById('guideDgConceptNext');
+          var rc = rough.svg(svg);
+
+          svg.appendChild(rc.rectangle(15, 20, 130, 58, { stroke: COL.accent, strokeWidth: 2.2, roughness: 2, fill: COL.accentFill, fillStyle: 'hachure', fillWeight: 1, hachureGap: 6 }));
+          text(svg, 80, 55, 'state', { size: 16, weight: 700, color: COL.accent });
+
+          svg.appendChild(rc.ellipse(80, 158, 148, 64, { stroke: COL.warm, strokeWidth: 2.2, roughness: 2, fill: COL.warmFill, fillStyle: 'hachure', fillWeight: 1, hachureGap: 6 }));
+          text(svg, 80, 164, 'event', { size: 16, weight: 700, color: COL.warm });
+
+          arrow(rc, svg, 150, 66, 213, 100, { stroke: COL.muted });
+          arrow(rc, svg, 148, 140, 213, 122, { stroke: COL.muted });
+
+          svg.appendChild(rc.circle(255, 111, 80, { stroke: COL.text, strokeWidth: 2.2, roughness: 2, fill: 'none' }));
+          text(svg, 255, 123, '?', { size: 36, weight: 700, color: COL.text });
+
+          arrow(rc, svg, 297, 111, 350, 111, { stroke: COL.accent });
+
+          svg.appendChild(rc.rectangle(360, 79, 115, 64, { stroke: COL.accent, strokeWidth: 2.2, roughness: 2, fill: COL.accentFill, fillStyle: 'hachure', fillWeight: 1, hachureGap: 6 }));
+          text(svg, 417, 105, 'next', { size: 15, weight: 700, color: COL.accent });
+          text(svg, 417, 126, 'state', { size: 15, weight: 700, color: COL.accent });
+        })();
+
+        // --- Concept 3: state, watched by a render function, becomes a picture ---
+        (function(){
+          var svg = document.getElementById('guideDgConceptRender');
+          var rc = rough.svg(svg);
+
+          svg.appendChild(rc.rectangle(15, 85, 130, 60, { stroke: COL.accent, strokeWidth: 2.2, roughness: 2, fill: COL.accentFill, fillStyle: 'hachure', fillWeight: 1, hachureGap: 6 }));
+          text(svg, 80, 120, 'state', { size: 16, weight: 700, color: COL.accent });
+
+          arrow(rc, svg, 150, 115, 205, 115, { stroke: COL.green });
+
+          svg.appendChild(rc.ellipse(245, 115, 90, 50, { stroke: COL.green, strokeWidth: 2, roughness: 2.2, fill: 'none' }));
+          svg.appendChild(rc.circle(245, 115, 26, { stroke: COL.green, strokeWidth: 1.8, roughness: 2, fill: COL.greenFill, fillStyle: 'hachure', fillWeight: 1, hachureGap: 5 }));
+
+          arrow(rc, svg, 292, 115, 337, 115, { stroke: COL.green });
+
+          svg.appendChild(rc.rectangle(347, 62, 115, 88, { stroke: COL.green, strokeWidth: 2.2, roughness: 2, fill: 'none' }));
+          svg.appendChild(rc.polygon([[359, 137], [392, 93], [422, 137]], { stroke: COL.green, strokeWidth: 1.8, roughness: 2.2, fill: COL.greenFill, fillStyle: 'hachure', fillWeight: 0.9, hachureGap: 5 }));
+          svg.appendChild(rc.circle(434, 80, 18, { stroke: COL.green, strokeWidth: 1.6, roughness: 2, fill: COL.greenFill, fillStyle: 'hachure', fillWeight: 1, hachureGap: 4 }));
+          text(svg, 404, 172, 'picture', { size: 15, weight: 700, color: COL.green });
+        })();
+
+        // --- State: sticky note ---
+        (function(){
+          var svg = document.getElementById('guideDgState');
+          var rc = rough.svg(svg);
+          var g = document.createElementNS(NS, 'g');
+          g.setAttribute('transform', 'rotate(-4 160 115)');
+          svg.appendChild(g);
+          g.appendChild(rc.rectangle(45, 35, 220, 150, { stroke: COL.warm, strokeWidth: 2, roughness: 2.2, fill: COL.warmFill, fillStyle: 'hachure', fillWeight: 1, hachureGap: 8 }));
+          text(g, 155, 88, 'cookies', { size: 16, color: COL.muted });
+          text(g, 155, 158, '0', { size: 68, weight: 700, color: COL.text });
+
+          arrow(rc, svg, 300, 62, 270, 82, { stroke: COL.accent, width: 2 });
+          text(svg, 302, 44, 'the whole state', { size: 14, color: COL.accent, anchor: 'end' });
+        })();
+
+        // --- nextState: flowchart — two inputs feed a dotted "function" box;
+        // each branch returns directly, so there's no separate output node ---
+        (function(){
+          var svg = document.getElementById('guideDgFlow');
+          var rc = rough.svg(svg);
+
+          // Two inputs: state and event, both feeding the same decision
+          svg.appendChild(rc.rectangle(70, 15, 170, 56, { stroke: COL.accent, strokeWidth: 2.2, roughness: 2, fill: COL.accentFill, fillStyle: 'hachure', fillWeight: 1, hachureGap: 6 }));
+          text(svg, 155, 48, 'state', { size: 18, weight: 700, color: COL.accent });
+
+          svg.appendChild(rc.ellipse(470, 45, 190, 60, { stroke: COL.warm, strokeWidth: 2.2, roughness: 2, fill: COL.warmFill, fillStyle: 'hachure', fillWeight: 1, hachureGap: 6 }));
+          text(svg, 470, 51, 'game event', { size: 17, weight: 700, color: COL.warm });
+
+          arrow(rc, svg, 170, 75, 270, 163, { stroke: COL.muted });
+          arrow(rc, svg, 440, 78, 370, 163, { stroke: COL.muted });
+
+          // Comment on the check, sitting outside (above) the function box
+          text(svg, 320, 116, 'check if cookie was clicked', { size: 14, color: COL.muted, style: 'italic' });
+          svg.appendChild(rc.line(320, 122, 320, 148, { stroke: COL.muted, strokeWidth: 1.6, roughness: 1.6 }));
+
+          // The dotted box: the nextState function itself
+          svg.appendChild(rc.rectangle(10, 140, 620, 242, { stroke: COL.muted, strokeWidth: 1.8, roughness: 1.3, fill: 'none', strokeLineDash: [7, 6] }));
+          text(svg, 30, 133, 'the next state function', { size: 15, weight: 700, color: COL.text, anchor: 'start' });
+
+          svg.appendChild(rc.polygon([[320, 150], [430, 205], [320, 260], [210, 205]], { stroke: COL.text, strokeWidth: 2, roughness: 2, fill: COL.textFill, fillStyle: 'hachure', fillWeight: 0.6, hachureGap: 9 }));
+          text(svg, 320, 199, 'event.id ===', { size: 14, weight: 700 });
+          text(svg, 320, 217, '"cookie" ?', { size: 14, weight: 700 });
+
+          arrow(rc, svg, 420, 219, 500, 290, { stroke: COL.green });
+          text(svg, 472, 258, 'yes', { size: 15, color: COL.green, weight: 700 });
+
+          arrow(rc, svg, 220, 219, 145, 290, { stroke: COL.muted });
+          text(svg, 168, 258, 'no', { size: 15, color: COL.muted, weight: 700 });
+
+          svg.appendChild(rc.rectangle(400, 292, 220, 80, { stroke: COL.green, strokeWidth: 2, roughness: 2, fill: COL.greenFill, fillStyle: 'hachure', fillWeight: 1, hachureGap: 8 }));
+          text(svg, 510, 322, 'return { cookies:', { size: 13, weight: 600, color: COL.green, mono: true });
+          text(svg, 510, 342, 'state.cookies + 1}', { size: 13, weight: 600, color: COL.green, mono: true });
+
+          svg.appendChild(rc.rectangle(20, 292, 210, 80, { stroke: COL.muted, strokeWidth: 2, roughness: 2, fill: COL.mutedFill, fillStyle: 'hachure', fillWeight: 0.7, hachureGap: 9 }));
+          text(svg, 125, 338, 'return state', { size: 17, weight: 700, color: COL.muted });
+
+          // Comments outside (below) the function box, one per branch
+          svg.appendChild(rc.line(510, 372, 510, 397, { stroke: COL.green, strokeWidth: 1.6, roughness: 1.6 }));
+          text(svg, 510, 410, 'return the state with', { size: 13, color: COL.green, style: 'italic' });
+          text(svg, 510, 428, 'one more cookie', { size: 13, color: COL.green, style: 'italic' });
+
+          svg.appendChild(rc.line(125, 372, 125, 397, { stroke: COL.muted, strokeWidth: 1.6, roughness: 1.6 }));
+          text(svg, 125, 410, '(return state unchanged)', { size: 13, color: COL.muted, style: 'italic' });
+        })();
+
+        // --- Render: annotate the actual screenshot ---
+        (function(){
+          var svg = document.getElementById('guideDgAnnotate');
+          var rc = rough.svg(svg);
+
+          svg.appendChild(rc.ellipse(430, 270, 118, 118, { stroke: COL.warm, strokeWidth: 3.5, roughness: 2.2, fill: 'none' }));
+          svg.appendChild(rc.line(430, 205, 330, 118, { stroke: COL.warm, strokeWidth: 2, roughness: 1.6 }));
+          text(svg, 320, 100, 'CIRCLE renderable', { size: 26, weight: 700, color: COL.warm, anchor: 'end' });
+          text(svg, 320, 128, 'isClickable: true', { size: 18, color: COL.warm, anchor: 'end', mono: true });
+
+          svg.appendChild(rc.rectangle(468, 236, 190, 68, { stroke: COL.accent, strokeWidth: 3, roughness: 2.2, fill: 'none' }));
+          svg.appendChild(rc.line(658, 236, 700, 120, { stroke: COL.accent, strokeWidth: 2, roughness: 1.6 }));
+          text(svg, 690, 102, 'TEXT renderable', { size: 24, weight: 700, color: COL.accent, anchor: 'start' });
+          text(svg, 690, 128, 'text: `${cookies} cookies`', { size: 14, color: COL.accent, anchor: 'start', mono: true });
+        })();
+
+        // --- Loop doodle ---
+        (function(){
+          var svg = document.getElementById('guideDgDoodle');
+          var rc = rough.svg(svg);
+          arrow(rc, svg, 12, 85, 118, 85, { stroke: COL.warm, width: 3.5, roughness: 2, head: 15 });
+          text(svg, 65, 55, 'click ×7', { size: 17, weight: 700, color: COL.warm });
+        })();
+
+        // --- Recap icons ---
+        (function(){
+          var svg = document.getElementById('guideDgIcon1');
+          var rc = rough.svg(svg);
+          svg.appendChild(rc.rectangle(25, 12, 50, 76, { stroke: COL.accent, strokeWidth: 2, roughness: 2.2, fill: COL.accentFill, fillStyle: 'hachure', fillWeight: 0.8, hachureGap: 7 }));
+          [30, 44, 58].forEach(function(y){
+            svg.appendChild(rc.line(34, y, 66, y, { stroke: COL.accent, strokeWidth: 1.6, roughness: 1.8 }));
+          });
+        })();
+        (function(){
+          var svg = document.getElementById('guideDgIcon2');
+          var rc = rough.svg(svg);
+          svg.appendChild(rc.polygon([[50, 14], [86, 50], [50, 86], [14, 50]], { stroke: COL.warm, strokeWidth: 2, roughness: 2.2, fill: COL.warmFill, fillStyle: 'hachure', fillWeight: 0.8, hachureGap: 7 }));
+          arrow(rc, svg, 2, 50, 12, 50, { stroke: COL.warm, width: 1.8, head: 7 });
+          arrow(rc, svg, 88, 50, 98, 50, { stroke: COL.warm, width: 1.8, head: 7 });
+        })();
+        (function(){
+          var svg = document.getElementById('guideDgIcon3');
+          var rc = rough.svg(svg);
+          svg.appendChild(rc.rectangle(14, 22, 72, 50, { stroke: COL.green, strokeWidth: 2, roughness: 2.2, fill: COL.greenFill, fillStyle: 'hachure', fillWeight: 0.7, hachureGap: 8 }));
+          svg.appendChild(rc.line(50, 72, 50, 84, { stroke: COL.green, strokeWidth: 2, roughness: 1.8 }));
+          svg.appendChild(rc.line(34, 86, 66, 86, { stroke: COL.green, strokeWidth: 2, roughness: 1.8 }));
+          svg.appendChild(rc.circle(35, 47, 20, { stroke: COL.warm, strokeWidth: 1.8, roughness: 2, fill: COL.warmFill, fillStyle: 'hachure', fillWeight: 1, hachureGap: 5 }));
+          svg.appendChild(rc.line(58, 42, 78, 42, { stroke: COL.muted, strokeWidth: 1.6, roughness: 1.6 }));
+          svg.appendChild(rc.line(58, 52, 72, 52, { stroke: COL.muted, strokeWidth: 1.6, roughness: 1.6 }));
+        })();
+      });
+    })();
+    </script>
+
+    <script>
+    (function(){
+      var viewport = document.getElementById('guideViewport');
+      var slides = Array.prototype.slice.call(viewport.querySelectorAll('.slide'));
+      var dotsWrap = document.getElementById('guideDots');
+      var prevBtn = document.getElementById('guidePrevBtn');
+      var nextBtn = document.getElementById('guideNextBtn');
+      var progressCur = document.getElementById('guideProgressCur');
+      document.getElementById('guideProgressTotal').textContent = slides.length;
+
+      var dots = slides.map(function(_, i){
+        var b = document.createElement('button');
+        b.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+        b.addEventListener('click', function(){ goTo(i); });
+        dotsWrap.appendChild(b);
+        return b;
+      });
+
+      var current = 0;
+      var scrolling = false;
+
+      function update(index){
+        current = Math.max(0, Math.min(slides.length - 1, index));
+        dots.forEach(function(d, i){ d.classList.toggle('active', i === current); });
+        progressCur.textContent = current + 1;
+        prevBtn.disabled = current === 0;
+        nextBtn.disabled = current === slides.length - 1;
+      }
+
+      function goTo(index){
+        index = Math.max(0, Math.min(slides.length - 1, index));
+        scrolling = true;
+        viewport.scrollTo({ left: index * viewport.clientWidth, behavior: 'smooth' });
+        update(index);
+        window.clearTimeout(goTo._t);
+        goTo._t = window.setTimeout(function(){ scrolling = false; }, 500);
+      }
+
+      prevBtn.addEventListener('click', function(){ goTo(current - 1); });
+      nextBtn.addEventListener('click', function(){ goTo(current + 1); });
+
+      var scrollTimer;
+      viewport.addEventListener('scroll', function(){
+        if (scrolling) return;
+        window.clearTimeout(scrollTimer);
+        scrollTimer = window.setTimeout(function(){
+          var index = Math.round(viewport.scrollLeft / viewport.clientWidth);
+          update(index);
+        }, 80);
+      });
+
+      window.addEventListener('keydown', function(e){
+        var rect = viewport.getBoundingClientRect();
+        var inView = rect.top < window.innerHeight && rect.bottom > 0;
+        if (!inView) return;
+        if (e.key === 'ArrowRight'){ goTo(current + 1); }
+        else if (e.key === 'ArrowLeft'){ goTo(current - 1); }
+      });
+
+      window.addEventListener('resize', function(){
+        viewport.scrollTo({ left: current * viewport.clientWidth, behavior: 'auto' });
+      });
+
+      update(0);
+    })();
+    </script>
 
     <!--
       container-fluid instead of .container (used everywhere else on the
