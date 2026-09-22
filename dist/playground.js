@@ -46,6 +46,16 @@ const EXAMPLES = [
     label: "Platformer",
     category: "games",
     description: "Move and jump across a few platforms — gravity, a jump, and nothing else.",
+    // Shown read-only in the Assets panel once this example's loaded (see
+    // renderAssetsPanel) — Sunny Land Pixel Game Art by ansimuz, credited
+    // in platformer.ts and in the README.
+    assets: [
+      { name: "fox-idle.png", path: "./resources/sunnyland/fox-idle.png" },
+      { name: "fox-walk.png", path: "./resources/sunnyland/fox-walk.png" },
+      { name: "fox-jump.png", path: "./resources/sunnyland/fox-jump.png" },
+      { name: "tile.png", path: "./resources/sunnyland/tile.png" },
+      { name: "background.png", path: "./resources/sunnyland/background.png" },
+    ],
   },
   {
     id: "shoot-em-up",
@@ -303,20 +313,36 @@ function copyAssetUrl(url, button) {
   });
 }
 
+function addAssetItem(list, name, url, badgeColor, badgeText) {
+  const item = document.createElement("div");
+  item.className = "asset-item";
+  item.innerHTML = `
+    <span class="ts-badge" style="background: ${badgeColor}">${badgeText}</span>
+    <span class="asset-name" title="${name}">${name}</span>
+    <button type="button" class="btn btn-sm btn-outline-light asset-copy">Copy path</button>
+  `;
+  item.querySelector(".asset-copy").onclick = (event) => copyAssetUrl(url, event.target);
+  list.appendChild(item);
+}
+
+// Two sources feed this panel: whatever real art/audio the *current*
+// example already ships with (EXAMPLES[id].assets — read-only, already at
+// their real path, nothing to upload) and whatever's been dropped in this
+// session via the Assets panel's own + button (uploadedAssets, which
+// — unlike the current example — stays the same across a project switch;
+// see its own comment above).
 function renderAssetsPanel() {
   const list = document.getElementById("assetsList");
   list.innerHTML = "";
 
+  const currentExample = currentProject && EXAMPLES.find((example) => example.id === currentProject.id);
+
+  for (const asset of currentExample?.assets ?? []) {
+    addAssetItem(list, asset.name, asset.path, "#198754", asset.name.split(".").pop().toUpperCase());
+  }
+
   for (const asset of uploadedAssets) {
-    const item = document.createElement("div");
-    item.className = "asset-item";
-    item.innerHTML = `
-      <span class="ts-badge" style="background: #6f42c1">A</span>
-      <span class="asset-name" title="${asset.name}">${asset.name}</span>
-      <button type="button" class="btn btn-sm btn-outline-light asset-copy">Copy path</button>
-    `;
-    item.querySelector(".asset-copy").onclick = (event) => copyAssetUrl(asset.url, event.target);
-    list.appendChild(item);
+    addAssetItem(list, asset.name, asset.url, "#6f42c1", "A");
   }
 }
 
@@ -415,6 +441,7 @@ async function loadProject(id) {
   window.editor.setModel(models[activeFile]);
 
   renderExplorer();
+  renderAssetsPanel();
   updatePreview();
 }
 

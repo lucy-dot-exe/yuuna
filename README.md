@@ -154,6 +154,10 @@ Currently used:
   [Henry Software](https://henrysoftware.itch.io/) — the food icons in
   the Food Clicker and Sprites examples. CC0; credited here by choice,
   not requirement.
+- **[Sunny Land Pixel Game Art](https://ansimuz.itch.io/sunny-land-pixel-game-art)**
+  by [ansimuz](https://ansimuz.itch.io/) — the fox (idle/walk/jump), the
+  ground/platform tile, and the parallax sky background in the
+  Platformer example.
 
 ## License
 

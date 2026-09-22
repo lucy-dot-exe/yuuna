@@ -1,0 +1,6 @@
+Sunny Land Pixel Game Art
+by ansimuz
+https://ansimuz.itch.io/sunny-land-pixel-game-art
+
+Used by the Platformer example (examples/platformer.ts):
+  fox-idle.png, fox-walk.png, fox-jump.png, tile.png, background.png
