@@ -395,6 +395,9 @@
         --code-text: #d7deeb;
         --tok-kw: #ff8fc0;
         --tok-str: #9fe08d;
+        --tok-ty: #6fd7ff;
+        --tok-com: #64749a;
+        --tok-pr: #ffce7a;
 
         background: var(--bg);
         color: var(--text);
@@ -557,6 +560,42 @@
       }
       #guide pre.code-chip .kw{ color: var(--tok-kw); }
       #guide pre.code-chip .st{ color: var(--tok-str); }
+      #guide pre.code-chip .ty{ color: var(--tok-ty); }
+      #guide pre.code-chip .cm{ color: var(--tok-com); font-style: italic; }
+      #guide pre.code-chip .pr{ color: var(--tok-pr); }
+      #guide pre.code-chip.small{ font-size: 11.5px; line-height: 1.55; padding: 11px 13px; }
+
+      #guide .render-code-row{
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 14px;
+        margin-top: 14px;
+        width: 100%;
+        flex-wrap: wrap;
+      }
+      #guide .render-code-row pre.code-chip{ margin: 0; flex: 0 1 260px; }
+
+      #guide .flow-overlay-wrap{
+        position: relative;
+        width: 100%;
+        margin-top: 6px;
+        display: flex;
+        justify-content: center;
+      }
+      #guide .flow-overlay-wrap .diagram-box{ opacity: 0.3; }
+      #guide .flow-overlay-wrap pre.code-chip{
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        max-width: 88%;
+        margin: 0;
+      }
+
+      @media (max-width: 760px){
+        #guide .render-code-row{ flex-direction: column; align-items: center; }
+      }
 
       #guide .shot-frame{
         position: relative;
@@ -862,7 +901,7 @@
           <!-- Slide 1: Cover -->
           <section class="slide">
             <div class="slide-inner">
-              <div class="eyebrow">A Yuuna walkthrough</div>
+              <div class="eyebrow">The basic game structure</div>
               <h1>State. Next state. Picture.</h1>
               <div class="diagram-box w-cover">
                 <svg id="guideDgCover" viewBox="0 0 700 310"></svg>
@@ -875,11 +914,11 @@
           <section class="slide">
             <div class="slide-inner">
               <div class="eyebrow">Step 1 of 3</div>
-              <h2>Declare a GameState</h2>
+              <h2>Declaring a GameState</h2>
+              <div class="mini-caption">the smallest shape that describes what's on screen</div>
               <div class="diagram-box w-concept">
                 <svg id="guideDgConceptState" viewBox="0 0 480 230"></svg>
               </div>
-              <div class="mini-caption">the smallest shape that describes what's on screen</div>
               <div class="signature-row"><div class="signature">type <b>GameState</b> = { ... }</div></div>
             </div>
           </section>
@@ -892,87 +931,108 @@
               <div class="diagram-box w-note">
                 <svg id="guideDgState" viewBox="0 0 320 230"></svg>
               </div>
-              <pre class="code-chip"><span class="kw">type</span> GameState = { cookies: number };
-<span class="kw">const</span> initialState = { cookies: <span class="st">0</span> };</pre>
-              <div class="badge"><svg id="guideDgBadgeState" viewBox="0 0 230 56"></svg></div>
+              <pre class="code-chip"><span class="cm">// Create a type for the state of your game</span>
+<span class="kw">type</span> <span class="ty">GameState</span> = { cookies: number };
+
+<span class="cm">// Create the initial state</span>
+<span class="kw">const</span> initialState: <span class="ty">GameState</span> = {
+  cookies: <span class="st">0</span>,
+};</pre>
             </div>
           </section>
 
-          <!-- Slide 4: Step 2, the idea -->
+          <!-- Slide 4: Step 2, the idea (render) -->
           <section class="slide">
             <div class="slide-inner">
-              <div class="eyebrow warm">Step 2 of 3</div>
-              <h2>Declare a NextState function</h2>
+              <div class="eyebrow">Step 2 of 3</div>
+              <h2>Creating the Render function</h2>
+              <div class="mini-caption">given a state, what do we draw?</div>
+              <div class="diagram-box w-concept">
+                <svg id="guideDgConceptRender" viewBox="0 0 480 230"></svg>
+              </div>
+              <div class="signature-row"><div class="signature">the <b>render</b>(state) &rarr; picture function</div></div>
+            </div>
+          </section>
+
+          <!-- Slide 5: Step 2, in cookie-clicker.ts (render) -->
+          <section class="slide">
+            <div class="slide-inner">
+              <div class="eyebrow">Step 2 example</div>
+              <h2>Cookie Clicker's render function</h2>
+              <div class="render-wrap">
+                <div class="shot-frame">
+                  <div class="bar"><span></span><span></span><span></span></div>
+                  <img src="guide/state-initial.png" alt="Cookie Clicker rendered: a brown cookie and the label 0 cookies" />
+                </div>
+              </div>
+              <div class="render-code-row">
+                <pre class="code-chip small"><span class="cm">// Renders a clickable circle</span>
+Yuuna.<span class="pr">circle</span>({
+  id: <span class="st">"cookie"</span>,
+  isClickable: <span class="kw">true</span>,
+  color: <span class="st">"#6B4423"</span>,
+  position: { x: 430, y: 270 },
+  radius: 30,
+}),</pre>
+                <pre class="code-chip small">Yuuna.<span class="pr">text</span>({
+  text: <span class="st">`${state.cookies} cookies`</span>,
+  color: <span class="st">"white"</span>,
+  position: { x: 480, y: 270 },
+  align: {
+    x: <span class="st">"left"</span>,
+    y: <span class="st">"middle"</span>,
+  },
+}),</pre>
+              </div>
+            </div>
+          </section>
+
+          <!-- Slide 6: Step 3, the idea (nextState) -->
+          <section class="slide">
+            <div class="slide-inner">
+              <div class="eyebrow warm">Step 3 of 3</div>
+              <h2>Creating the NextState Function</h2>
+              <div class="mini-caption">given state + an event, what's next?</div>
               <div class="diagram-box w-concept">
                 <svg id="guideDgConceptNext" viewBox="0 0 480 240"></svg>
               </div>
-              <div class="mini-caption">given state + an event, what's next?</div>
               <div class="signature-row"><div class="signature">the <b>nextState</b>(state, event) &rarr; state function</div></div>
               <div class="mini-caption">this is the reducer pattern — same shape as a Redux reducer or useReducer</div>
             </div>
           </section>
 
-          <!-- Slide 5: Step 2, in cookie-clicker.ts -->
+          <!-- Slide 7: Step 3, in cookie-clicker.ts (nextState, the flow) -->
           <section class="slide">
             <div class="slide-inner">
-              <div class="eyebrow warm">Step 2 example</div>
-              <h2>Cookie Clicker's next state function</h2>
+              <div class="eyebrow warm">Step 3 example</div>
+              <h2>Cookie Clicker's NextState function</h2>
               <div class="diagram-box w-flow">
                 <svg id="guideDgFlow" viewBox="0 0 640 450"></svg>
               </div>
-              <div class="badge"><svg id="guideDgBadgeNext" viewBox="0 0 230 56"></svg></div>
             </div>
           </section>
 
-          <!-- Slide 6: Step 3, the idea -->
+          <!-- Slide 8: Step 3, in cookie-clicker.ts (nextState, the code) -->
           <section class="slide">
             <div class="slide-inner">
-              <div class="eyebrow">Step 3 of 3</div>
-              <h2>Declare a render function</h2>
-              <div class="diagram-box w-concept">
-                <svg id="guideDgConceptRender" viewBox="0 0 480 230"></svg>
-              </div>
-              <div class="mini-caption">given a state, what do we draw?</div>
-              <div class="signature-row"><div class="signature">the <b>render</b>(state) &rarr; picture function</div></div>
-            </div>
-          </section>
+              <div class="eyebrow warm">Step 3 example</div>
+              <h2>Cookie Clicker's NextState function</h2>
+              <div class="flow-overlay-wrap">
+                <div class="diagram-box w-flow">
+                  <svg id="guideDgFlow2" viewBox="0 0 640 450"></svg>
+                </div>
+                <pre class="code-chip small"><span class="kw">const</span> nextState: <span class="ty">NextStateFunction</span>&lt;<span class="ty">GameState</span>&gt; = (props) =&gt; {
+  <span class="cm">// If the event is a "cookie is clicked" event</span>
+  <span class="kw">if</span> (props.event.tag === <span class="st">"CLICK"</span> &amp;&amp; props.event.id === <span class="st">"cookie"</span>) {
+    <span class="kw">return</span> {
+      <span class="cm">// Sums 1 in the cookies counter</span>
+      cookies: props.state.cookies + <span class="st">1</span>,
+    };
+  }
 
-          <!-- Slide 7: Step 3, in cookie-clicker.ts -->
-          <section class="slide">
-            <div class="slide-inner">
-              <div class="eyebrow">Step 3 example</div>
-              <h2>Cookie Clicker's render function</h2>
-              <div class="render-wrap">
-                <div class="shot-frame">
-                  <div class="bar"><span></span><span></span><span></span></div>
-                  <div class="stack">
-                    <img src="guide/state-initial.png" alt="Cookie Clicker rendered at its initial state: a brown cookie and the label 0 cookies" />
-                    <svg class="anno" id="guideDgAnnotate" viewBox="0 0 960 541" preserveAspectRatio="xMidYMid meet"></svg>
-                  </div>
-                </div>
-                <div class="shot-caption">every shape traced back to one line of code</div>
-              </div>
-              <div class="badge"><svg id="guideDgBadgeRender" viewBox="0 0 230 56"></svg></div>
-            </div>
-          </section>
-
-          <!-- Slide 8: The loop, live -->
-          <section class="slide">
-            <div class="slide-inner">
-              <div class="eyebrow warm">See it work</div>
-              <h2>Same file, seven clicks later</h2>
-              <div class="dual-shots">
-                <div class="shot-frame">
-                  <div class="bar"><span></span><span></span><span></span></div>
-                  <img src="guide/state-initial.png" alt="0 cookies, before any clicks" />
-                  <div class="shot-caption">before</div>
-                </div>
-                <div class="doodle"><svg id="guideDgDoodle" viewBox="0 0 160 160"></svg></div>
-                <div class="shot-frame">
-                  <div class="bar"><span></span><span></span><span></span></div>
-                  <img src="guide/state-after-clicks.png" alt="7 cookies, after clicking the cookie seven times" />
-                  <div class="shot-caption">after</div>
-                </div>
+  <span class="cm">// Else, state remains unchanged</span>
+  <span class="kw">return</span> props.state;
+};</pre>
               </div>
             </div>
           </section>
@@ -1196,9 +1256,12 @@
         })();
 
         // --- nextState: flowchart — two inputs feed a dotted "function" box;
-        // each branch returns directly, so there's no separate output node ---
-        (function(){
-          var svg = document.getElementById('guideDgFlow');
+        // each branch returns directly, so there's no separate output node.
+        // Drawn twice: once as the flowchart slide, once dimmed behind the
+        // full nextState source on the slide right after it. ---
+        function drawFlow(id){
+          var svg = document.getElementById(id);
+          if (!svg) return;
           var rc = rough.svg(svg);
 
           // Two inputs: state and event, both feeding the same decision
@@ -1243,31 +1306,9 @@
 
           svg.appendChild(rc.line(125, 372, 125, 397, { stroke: COL.muted, strokeWidth: 1.6, roughness: 1.6 }));
           text(svg, 125, 410, '(return state unchanged)', { size: 13, color: COL.muted, style: 'italic' });
-        })();
-
-        // --- Render: annotate the actual screenshot ---
-        (function(){
-          var svg = document.getElementById('guideDgAnnotate');
-          var rc = rough.svg(svg);
-
-          svg.appendChild(rc.ellipse(430, 270, 118, 118, { stroke: COL.warm, strokeWidth: 3.5, roughness: 2.2, fill: 'none' }));
-          svg.appendChild(rc.line(430, 205, 330, 118, { stroke: COL.warm, strokeWidth: 2, roughness: 1.6 }));
-          text(svg, 320, 100, 'CIRCLE renderable', { size: 26, weight: 700, color: COL.warm, anchor: 'end' });
-          text(svg, 320, 128, 'isClickable: true', { size: 18, color: COL.warm, anchor: 'end', mono: true });
-
-          svg.appendChild(rc.rectangle(468, 236, 190, 68, { stroke: COL.accent, strokeWidth: 3, roughness: 2.2, fill: 'none' }));
-          svg.appendChild(rc.line(658, 236, 700, 120, { stroke: COL.accent, strokeWidth: 2, roughness: 1.6 }));
-          text(svg, 690, 102, 'TEXT renderable', { size: 24, weight: 700, color: COL.accent, anchor: 'start' });
-          text(svg, 690, 128, 'text: `${cookies} cookies`', { size: 14, color: COL.accent, anchor: 'start', mono: true });
-        })();
-
-        // --- Loop doodle ---
-        (function(){
-          var svg = document.getElementById('guideDgDoodle');
-          var rc = rough.svg(svg);
-          arrow(rc, svg, 12, 85, 118, 85, { stroke: COL.warm, width: 3.5, roughness: 2, head: 15 });
-          text(svg, 65, 55, 'click ×7', { size: 17, weight: 700, color: COL.warm });
-        })();
+        }
+        drawFlow('guideDgFlow');
+        drawFlow('guideDgFlow2');
 
         // --- Recap icons ---
         (function(){
