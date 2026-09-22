@@ -2,8 +2,18 @@ let autoReload = true;
 let manifest = null;
 let currentProject = null;
 let models = {}; // fileName -> monaco.editor.ITextModel, for the open project
+
+// A tab is either { type: "file", file } (shown in the Monaco editor) or
+// { type: "asset", name, url, badgeColor, badgeText } (an image/audio
+// preview, VS Code-style, shown in #assetPreview instead — see
+// openAsset/showAssetPreview below).
 let openTabs = [];
-let activeFile = null;
+let activeTab = null;
+
+function isSameTab(a, b) {
+  if (!a || !b || a.type !== b.type) return false;
+  return a.type === "file" ? a.file === b.file : a.name === b.name;
+}
 
 function onAutoReloadToggle(checked) {
   autoReload = checked;
@@ -325,12 +335,20 @@ function copyAssetUrl(url, button) {
 function addAssetItem(list, name, url, badgeColor, badgeText) {
   const item = document.createElement("div");
   item.className = "asset-item";
+  item.title = `Open ${name} in a preview tab`;
   item.innerHTML = `
     <span class="ts-badge" style="background: ${badgeColor}">${badgeText}</span>
     <span class="asset-name" title="${name}">${name}</span>
     <button type="button" class="btn btn-sm btn-outline-light asset-copy">Copy path</button>
   `;
-  item.querySelector(".asset-copy").onclick = (event) => copyAssetUrl(url, event.target);
+  item.onclick = () => openAsset({ name, url, badgeColor, badgeText });
+  // Otherwise clicking the button would also bubble up into the item's
+  // own onclick above and open the asset's preview tab right after
+  // copying its path.
+  item.querySelector(".asset-copy").onclick = (event) => {
+    event.stopPropagation();
+    copyAssetUrl(url, event.target);
+  };
   list.appendChild(item);
 }
 
@@ -445,9 +463,10 @@ async function loadProject(id) {
   }
 
   currentProject = project;
-  openTabs = [project.entry];
-  activeFile = project.entry;
-  window.editor.setModel(models[activeFile]);
+  openTabs = [{ type: "file", file: project.entry }];
+  activeTab = openTabs[0];
+  window.editor.setModel(models[activeTab.file]);
+  showEditor();
 
   renderExplorer();
   renderAssetsPanel();
@@ -457,29 +476,54 @@ async function loadProject(id) {
 // Switches which file the editor is showing — opens it as a new tab
 // the first time, same as clicking a file in VS Code's Explorer
 function openFile(file) {
-  if (!openTabs.includes(file)) {
-    openTabs.push(file);
+  const tab = { type: "file", file };
+
+  if (!openTabs.some((openTab) => isSameTab(openTab, tab))) {
+    openTabs.push(tab);
   }
 
-  activeFile = file;
+  activeTab = tab;
   window.editor.setModel(models[file]);
+  showEditor();
+  renderExplorer();
+}
+
+// Same idea as openFile, but for an asset from the Assets panel — shown
+// as an image/audio preview (see showAssetPreview) rather than in Monaco,
+// same as clicking an image file opens a preview tab in real VS Code.
+function openAsset(asset) {
+  const tab = { type: "asset", ...asset };
+  const existing = openTabs.find((openTab) => isSameTab(openTab, tab));
+
+  if (existing === undefined) {
+    openTabs.push(tab);
+  }
+
+  activeTab = existing ?? tab;
+  showAssetPreview(activeTab);
   renderExplorer();
 }
 
 // Closing a tab only changes what's showing — it doesn't remove the
 // file from the project, same as closing a tab in real VS Code
-function closeTab(file, event) {
+function closeTab(tab, event) {
   event.stopPropagation();
 
-  openTabs = openTabs.filter((openFile) => openFile !== file);
+  openTabs = openTabs.filter((openTab) => !isSameTab(openTab, tab));
 
   if (openTabs.length === 0) {
-    openTabs = [currentProject.entry];
+    openTabs = [{ type: "file", file: currentProject.entry }];
   }
 
-  if (activeFile === file) {
-    activeFile = openTabs[openTabs.length - 1];
-    window.editor.setModel(models[activeFile]);
+  if (isSameTab(activeTab, tab)) {
+    activeTab = openTabs[openTabs.length - 1];
+
+    if (activeTab.type === "file") {
+      window.editor.setModel(models[activeTab.file]);
+      showEditor();
+    } else {
+      showAssetPreview(activeTab);
+    }
   }
 
   renderExplorer();
@@ -493,8 +537,9 @@ function renderExplorer() {
   sidebar.innerHTML = `<div class="folder-label">${currentProject.label.toUpperCase()}</div>`;
 
   for (const file of currentProject.files) {
+    const isActive = activeTab?.type === "file" && activeTab.file === file;
     const item = document.createElement("div");
-    item.className = "file-item" + (file === activeFile ? " active" : "");
+    item.className = "file-item" + (isActive ? " active" : "");
     item.innerHTML = `<span class="ts-badge">TS</span><span>${file}</span>`;
     item.onclick = () => openFile(file);
     sidebar.appendChild(item);
@@ -503,14 +548,62 @@ function renderExplorer() {
   const tabBar = document.getElementById("tabBar");
   tabBar.innerHTML = "";
 
-  for (const file of openTabs) {
+  for (const openTab of openTabs) {
+    const isActive = isSameTab(openTab, activeTab);
+    const label = openTab.type === "file" ? openTab.file : openTab.name;
+    const badge =
+      openTab.type === "file"
+        ? `<span class="ts-badge">TS</span>`
+        : `<span class="ts-badge" style="background: ${openTab.badgeColor}">${openTab.badgeText}</span>`;
+
     const tab = document.createElement("div");
-    tab.className = "tab" + (file === activeFile ? " active" : "");
-    tab.innerHTML = `<span class="ts-badge">TS</span><span>${file}</span><span class="close">×</span>`;
-    tab.onclick = () => openFile(file);
-    tab.querySelector(".close").onclick = (event) => closeTab(file, event);
+    tab.className = "tab" + (isActive ? " active" : "");
+    tab.innerHTML = `${badge}<span>${label}</span><span class="close">×</span>`;
+    tab.onclick = () => (openTab.type === "file" ? openFile(openTab.file) : openAsset(openTab));
+    tab.querySelector(".close").onclick = (event) => closeTab(openTab, event);
     tabBar.appendChild(tab);
   }
+}
+
+// Extension -> preview kind, for showAssetPreview below.
+function assetKind(name) {
+  const ext = name.split(".").pop().toLowerCase();
+
+  if (["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"].includes(ext)) return "image";
+  if (["mp3", "wav", "ogg", "m4a", "flac", "aac"].includes(ext)) return "audio";
+  return "other";
+}
+
+// Shows an asset as its own preview tab instead of in Monaco, the same
+// way clicking an image file opens a read-only preview tab in real VS
+// Code — pixel art keeps its hard edges (image-rendering: pixelated,
+// see examples.html) instead of coming out blurry.
+function showAssetPreview({ name, url }) {
+  const preview = document.getElementById("assetPreview");
+  const kind = assetKind(name);
+
+  if (kind === "image") {
+    preview.innerHTML = `<img src="${url}" alt="${name}" />`;
+  } else if (kind === "audio") {
+    preview.innerHTML = `<audio controls src="${url}"></audio>`;
+  } else {
+    preview.innerHTML = `<div class="text-body-secondary">Can't preview "${name}" here — <a href="${url}" target="_blank" rel="noopener">open it in a new browser tab</a> instead.</div>`;
+  }
+
+  preview.classList.add("visible");
+  document.getElementById("editorContainer").style.display = "none";
+}
+
+function showEditor() {
+  // Optional chaining because this runs on every project load, including
+  // from a page that's mid-refresh with a cached HTML shell that predates
+  // #assetPreview — better to skip hiding a preview that can't exist than
+  // to throw here and abort loadProject() before it reaches renderExplorer().
+  document.getElementById("assetPreview")?.classList.remove("visible");
+  document.getElementById("editorContainer").style.display = "";
+  // Monaco doesn't re-measure itself while its container is display:none,
+  // so force one relayout now that it's visible again.
+  window.editor?.layout();
 }
 
 function setAutoReloadButtonState(state) {
