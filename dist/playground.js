@@ -133,6 +133,10 @@ function renderExamplesGrid() {
     feature: document.getElementById("examplesFeatureGrid"),
   };
 
+  // Not every page has the full Examples gallery — the landing page
+  // only has #tryItGameTabs below (see renderTryItGameTabs()).
+  if (!gridByCategory.games || !gridByCategory.feature) return;
+
   for (const example of EXAMPLES) {
     const col = document.createElement("div");
     col.className = "col-md-6 col-lg-3";
@@ -173,6 +177,70 @@ async function openExample(id) {
 
   await playgroundReady;
   await loadProject(id);
+}
+
+// The landing page's "Try it live" section (#tryItGameTabs) replaces
+// #exampleSelect's dropdown with cards acting as tabs, restricted to
+// just the Games examples — the section is meant for playing with a
+// full game, not hunting through every small feature snippet (those
+// stay on the All Examples page). #exampleSelect itself still exists
+// there, as a hidden input rather than a real <select> — loadProject()
+// and its callers don't need to know the difference.
+function renderTryItGameTabs() {
+  const container = document.getElementById("tryItGameTabs");
+  if (!container) return; // examples.html keeps the plain dropdown instead
+
+  const games = EXAMPLES.filter((example) => example.category === "games");
+
+  for (const example of games) {
+    const col = document.createElement("div");
+    col.className = "col-6 col-lg-3";
+
+    col.innerHTML = `
+      <div class="card example-card game-tab-card bg-body-tertiary h-100" tabindex="0" role="button" data-id="${example.id}">
+        <div class="card-body">
+          <div class="example-icon games"><i class="bi bi-joystick"></i></div>
+          <h5 class="card-title">${example.label}</h5>
+          <p class="card-text text-body-secondary" style="font-size: 0.85rem">${example.description}</p>
+        </div>
+      </div>
+    `;
+
+    const card = col.querySelector(".game-tab-card");
+    card.addEventListener("click", () => selectTryItGame(example.id));
+    card.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        selectTryItGame(example.id);
+      }
+    });
+
+    container.appendChild(col);
+  }
+
+  updateActiveGameTab(document.getElementById("exampleSelect").value);
+}
+
+renderTryItGameTabs();
+
+// Same load as openExample() above, minus the scroll (the tabs are
+// already right next to the playground), plus updating which tab
+// shows as active.
+async function selectTryItGame(id) {
+  document.getElementById("exampleSelect").value = id;
+  updateActiveGameTab(id);
+
+  await playgroundReady;
+  await loadProject(id);
+}
+
+function updateActiveGameTab(id) {
+  const container = document.getElementById("tryItGameTabs");
+  if (!container) return;
+
+  for (const card of container.querySelectorAll(".game-tab-card")) {
+    card.classList.toggle("active", card.dataset.id === id);
+  }
 }
 
 // Drag the handle below the editor to resize it vertically — Monaco's

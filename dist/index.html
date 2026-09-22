@@ -334,6 +334,13 @@
         background: rgba(25, 135, 84, 0.18);
         color: #75c298;
       }
+      /* The "Try it live" game picker (#tryItGameTabs) reuses .example-card
+         but acts as a tab strip instead of a link — .active marks whichever
+         game is currently loaded in the editor below. */
+      .game-tab-card.active {
+        border-color: rgba(13, 110, 253, 0.7);
+        background-color: rgba(13, 110, 253, 0.12) !important;
+      }
     </style>
 
     <link
@@ -393,19 +400,16 @@
               <a class="nav-link" href="#top">Home</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#examples">Examples</a>
-            </li>
-            <li class="nav-item">
               <a class="nav-link" href="examples.html">All Examples</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="#playground">Playground</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#templates">Templates</a>
+              <a class="nav-link" href="#games">Games</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#games">Games</a>
+              <a class="nav-link" href="#templates">Templates</a>
             </li>
             <li class="nav-item">
               <a
@@ -506,26 +510,11 @@
       </div>
     </div>
 
-    <div id="examples" class="container mt-5 mb-5">
-      <h2>Examples</h2>
-      <p class="text-body-secondary">
-        Everything in <a href="https://github.com/lucy-dot-exe/yuuna/tree/main/examples" target="_blank" rel="noopener"><code>examples/</code></a> —
-        full games and small, focused snippets for one concept at a time.
-        Click one to open it in the <a href="#playground">playground</a> below.
-      </p>
-
-      <h6 class="text-uppercase text-body-secondary mt-4 mb-2" style="letter-spacing: 0.5px">Games</h6>
-      <div class="row g-3 mb-4" id="examplesGamesGrid"></div>
-
-      <h6 class="text-uppercase text-body-secondary mb-2" style="letter-spacing: 0.5px">Feature examples</h6>
-      <div class="row g-3" id="examplesFeatureGrid"></div>
-    </div>
-
     <!--
       container-fluid instead of .container (used everywhere else on the
       page) — full viewport width, but with the exact same side padding
       .container itself uses (Bootstrap's default 0.75rem gutter on both),
-      so the editor/canvas below still line up with the hero/examples/
+      so the editor/canvas below still line up with the hero/games/
       templates sections' edges instead of hugging the browser edge on
       their own, smaller margin.
     -->
@@ -533,11 +522,11 @@
       <div class="container">
         <h2>Try it live</h2>
         <p class="text-body-secondary">
-          Edit the TypeScript below — the canvas above runs it as you type.
-          Pick a full game from <strong>Games</strong> below, or a small,
-          focused snippet for one concept at a time from
-          <strong>Feature examples</strong>.
+          Pick a game below — the canvas and editor underneath load it
+          instantly, and you can edit the TypeScript as it runs.
         </p>
+
+        <div class="row g-3 mb-4" id="tryItGameTabs"></div>
       </div>
       <!--
         Preview on top, editor below — stacked instead of side-by-side so
@@ -591,47 +580,16 @@
         </div>
 
         <div>
-          <div
-            style="
-              display: flex;
-              flex-direction: row;
-              align-items: stretch;
-              width: 100%;
-              margin-bottom: 6px;
-            "
-          >
-            <div style="margin: 5px 10px">Editor:</div>
-            <div class="hstack" style="margin-left: auto">
-              <select
-                id="exampleSelect"
-                class="form-select form-select-sm"
-                onchange="loadProject(this.value)"
-              >
-                <optgroup label="Games">
-                  <option value="cookie-clicker" selected>
-                    Cookie Clicker
-                  </option>
-                  <option value="food-clicker">Food Clicker</option>
-                  <option value="tower-defense">Tower Defense</option>
-                  <option value="shoot-em-up">Shoot Em Up</option>
-                </optgroup>
-                <optgroup label="Feature examples">
-                  <option value="camera">Camera</option>
-                  <option value="groups-and-layers">Groups &amp; Layers</option>
-                  <option value="mechanics-pipeline">Mechanics Pipeline</option>
-                  <option value="custom-events">Custom Events</option>
-                  <option value="sprites">Sprites</option>
-                  <option value="animated-sprites">Animated Sprites</option>
-                  <option value="music-controls">Music Controls</option>
-                  <option value="mouse-leave">Mouse Leave</option>
-                  <option value="tab-visibility">Tab Visibility</option>
-                  <option value="palette-swap">Palette Swap</option>
-                  <option value="window-resize">Window Resize</option>
-                  <option value="fullscreen">Fullscreen</option>
-                </optgroup>
-              </select>
-            </div>
-          </div>
+          <div style="margin: 5px 10px 6px">Editor:</div>
+          <!--
+            No visible control here anymore — which game is loaded is
+            driven by #tryItGameTabs above instead (see
+            renderTryItGameTabs()/selectTryItGame() in playground.js).
+            This hidden input just keeps loadProject()'s "current id"
+            state in one place, the same way #exampleSelect (a real
+            <select>) still does on the All Examples page.
+          -->
+          <input type="hidden" id="exampleSelect" value="cookie-clicker" />
 
           <div class="playground-shell" id="playgroundShell">
             <div class="file-sidebar" id="fileSidebar">
@@ -663,6 +621,67 @@
           <div class="resize-handle" id="resizeHandle" title="Drag to resize the editor">
             <div class="grip"></div>
           </div>
+        </div>
+      </div>
+
+      <div class="container">
+        <p class="text-body-secondary mt-3">
+          Looking for something smaller? See
+          <a href="examples.html">all examples</a>, including small,
+          focused snippets for one concept at a time.
+        </p>
+      </div>
+    </div>
+
+    <div id="games" class="container mt-5 mb-5">
+      <h2>Games built with Yuuna</h2>
+      <p class="text-body-secondary">
+        Real projects made with the engine.
+      </p>
+
+      <div class="row g-3">
+        <div class="col-md-4">
+          <a
+            href="https://lucinaexe.itch.io/yuunas-td"
+            target="_blank"
+            rel="noopener"
+            class="text-decoration-none text-reset"
+          >
+            <div class="card example-card bg-body-tertiary">
+              <div class="game-card-media">
+                <img
+                  src="./resources/yuunas-heroes.png"
+                  class="game-card-img"
+                  alt="Yuuna's Heroes cover art"
+                  loading="lazy"
+                />
+                <img
+                  src="./resources/yuunas-heroes-1.png"
+                  class="game-card-img"
+                  alt="Yuuna's Heroes title screen"
+                  loading="lazy"
+                />
+                <img
+                  src="./resources/yuunas-heroes-2.png"
+                  class="game-card-img"
+                  alt="Yuuna's Heroes gameplay, wave 2"
+                  loading="lazy"
+                />
+                <img
+                  src="./resources/yuunas-heroes-3.png"
+                  class="game-card-img"
+                  alt="Yuuna's Heroes gameplay, wave 5"
+                  loading="lazy"
+                />
+              </div>
+              <div class="card-body">
+                <h5 class="card-title">Yuuna's Heroes</h5>
+                <p class="card-text text-body-secondary">
+                  An RPG Tower Defense
+                </p>
+              </div>
+            </div>
+          </a>
         </div>
       </div>
     </div>
@@ -738,59 +757,6 @@
         >
         on GitHub.
       </p>
-    </div>
-
-    <div id="games" class="container mt-5 mb-5">
-      <h2>Games built with Yuuna</h2>
-      <p class="text-body-secondary">
-        Real projects made with the engine.
-      </p>
-
-      <div class="row g-3">
-        <div class="col-md-4">
-          <a
-            href="https://lucinaexe.itch.io/yuunas-td"
-            target="_blank"
-            rel="noopener"
-            class="text-decoration-none text-reset"
-          >
-            <div class="card example-card bg-body-tertiary">
-              <div class="game-card-media">
-                <img
-                  src="./resources/yuunas-heroes.png"
-                  class="game-card-img"
-                  alt="Yuuna's Heroes cover art"
-                  loading="lazy"
-                />
-                <img
-                  src="./resources/yuunas-heroes-1.png"
-                  class="game-card-img"
-                  alt="Yuuna's Heroes title screen"
-                  loading="lazy"
-                />
-                <img
-                  src="./resources/yuunas-heroes-2.png"
-                  class="game-card-img"
-                  alt="Yuuna's Heroes gameplay, wave 2"
-                  loading="lazy"
-                />
-                <img
-                  src="./resources/yuunas-heroes-3.png"
-                  class="game-card-img"
-                  alt="Yuuna's Heroes gameplay, wave 5"
-                  loading="lazy"
-                />
-              </div>
-              <div class="card-body">
-                <h5 class="card-title">Yuuna's Heroes</h5>
-                <p class="card-text text-body-secondary">
-                  An RPG Tower Defense
-                </p>
-              </div>
-            </div>
-          </a>
-        </div>
-      </div>
     </div>
 
     <footer class="text-center text-body-secondary py-4 mt-4">
