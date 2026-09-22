@@ -43,12 +43,14 @@ const EXAMPLES = [
     id: "cookie-clicker",
     label: "Cookie Clicker",
     category: "games",
+    icon: "bi-cookie",
     description: "Click the cookie, watch the counter go up — the smallest possible click → state → render loop.",
   },
   {
     id: "food-clicker",
     label: "Food Clicker",
     category: "games",
+    icon: "bi-egg-fried",
     description: "Beat the 15-second clock — catching food fast builds a combo that's worth more and spawns faster.",
     // Free Pixel Food! by Henry Software, credited in main.ts and the README
     assets: [{ name: "food.png", path: "./resources/pixel-food/food.png" }],
@@ -57,6 +59,7 @@ const EXAMPLES = [
     id: "platformer",
     label: "Platformer",
     category: "games",
+    icon: "bi-person-walking",
     description: "Move and jump across a few platforms — gravity, a jump, and nothing else.",
     // Shown read-only in the Assets panel once this example's loaded (see
     // renderAssetsPanel) — Sunny Land Pixel Game Art by ansimuz, credited
@@ -73,6 +76,7 @@ const EXAMPLES = [
     id: "shoot-em-up",
     label: "Shoot Em Up",
     category: "games",
+    icon: "bi-crosshair",
     description: "The ship follows your mouse — hold the button down to fire at enemies falling from the top.",
     // Mini Pixel Pack 3 by GrafxKid, credited in shoot-em-up.ts and the README
     assets: [
@@ -228,7 +232,7 @@ function renderTryItGameTabs() {
     col.innerHTML = `
       <div class="card example-card game-tab-card bg-body-tertiary h-100" tabindex="0" role="button" data-id="${example.id}">
         <div class="card-body">
-          <div class="example-icon games"><i class="bi bi-joystick"></i></div>
+          <div class="example-icon games"><i class="bi ${example.icon}"></i></div>
           <h5 class="card-title">${example.label}</h5>
           <p class="card-text text-body-secondary" style="font-size: 0.85rem">${example.description}</p>
         </div>
