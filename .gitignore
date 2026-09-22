@@ -14,3 +14,4 @@ lib/
 # just with placeholder art instead of the real thing.
 dist/resources/*
 !dist/resources/yuuna.png
+!dist/resources/yuunas-heroes*.png
