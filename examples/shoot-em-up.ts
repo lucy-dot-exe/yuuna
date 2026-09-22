@@ -117,11 +117,11 @@ const render: RenderFunction = (state) => {
   return { cursor: "none", renderables };
 };
 
-// Each mechanic below only handles the one thing its name says — see
-// examples/tower-defense/nextState.ts for the same style at a larger
-// scale. A plain `if` with no return falls off the end (implicit
-// undefined), meaning "no change, keep going" — nextState runs the whole
-// list in order for every event.
+// Each mechanic below only handles the one thing its name says —
+// examples/mechanics-pipeline.ts is dedicated to demonstrating exactly
+// this, in miniature. A plain `if` with no return falls off the end
+// (implicit undefined), meaning "no change, keep going" — nextState runs
+// the whole list in order for every event.
 
 const freezeOnGameOver: NextStateFunction<GameState> = ({ state }) => {
   if (state.gameOver) {

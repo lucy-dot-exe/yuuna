@@ -42,10 +42,10 @@ const EXAMPLES = [
     description: "Beat the 30-second clock — catching food fast builds a combo that's worth more and spawns faster.",
   },
   {
-    id: "tower-defense",
-    label: "Tower Defense",
+    id: "platformer",
+    label: "Platformer",
     category: "games",
-    description: "Enemies walk down the lane in escalating waves — turrets melt anything that gets close enough.",
+    description: "Move and jump across a few platforms — gravity, a jump, and nothing else.",
   },
   {
     id: "shoot-em-up",

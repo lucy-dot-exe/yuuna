@@ -7,8 +7,8 @@
 const CANVAS_WIDTH = 960;
 const CANVAS_HEIGHT = 540;
 
-// skeleton.png — same resource examples/tower-defense uses for its
-// enemies: a 48x16 sheet, three 16x16 frames of a walk cycle in a row
+// skeleton.png — same resource examples/palette-swap.ts uses: a 48x16
+// sheet, three 16x16 frames of a walk cycle in a row
 const FRAME_SIZE = 16;
 const FRAME_COUNT = 3;
 const FRAME_DURATION = 150; // milliseconds each frame is shown
