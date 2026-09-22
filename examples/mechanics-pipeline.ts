@@ -79,6 +79,9 @@ const countMisses: NextStateFunction<GameState> = ({ state, event }) => {
 // nextState doesn't have to be one function — it can be a list like this
 // one instead, run in order for every event. Each returns a new state, an
 // early STOP, or undefined to make no change and let the rest keep going.
+// Each function here is a small reducer — (state, event) => state — and
+// the list composes them into a pipeline, the same idea as chaining
+// reducers/middleware in Redux.
 const nextState: (NextStateFunction<GameState> | NextStateFunction<GameState>[]) = [
   freezeOnGameOver,
   countHits,

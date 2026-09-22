@@ -300,6 +300,12 @@ export const STOP = "Yuuna.STOP" as const;
 //    `if (...) return;` instead of `if (...) return state;`
 //  - STOP to make no change AND stop the rest of the list from running
 //    for this event
+//
+// This is the reducer pattern — (state, event) => nextState, the same
+// shape as a Redux reducer or React's useReducer. STOP is Yuuna's one
+// addition on top of that shape, for short-circuiting a pipeline of
+// reducers (see RunEngineProps.nextState below) the way middleware
+// skipping `next()` would.
 export type NextStateFunction<State, Custom = never> = (
   props: NextStateProps<State, Custom>
 ) => State | typeof STOP | undefined;
@@ -316,7 +322,8 @@ export type RunEngineProps<State, Custom = never> = {
   // A single function, or a list of (state) => state mechanics run in
   // order for each event — the output of one feeds into the next, so you
   // can break a game down into small, independent functions instead of
-  // one large nextState.
+  // one large nextState. A list is just composable reducers: each
+  // mechanic is its own (state, event) => state, run in a pipeline.
   nextState: NextStateFunction<State, Custom> | NextStateFunction<State, Custom>[];
   resources?: Record<
     string,

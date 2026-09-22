@@ -9,8 +9,10 @@
 A lightweight, state-machine-based TypeScript game engine — drop it into a
 page and it's running, no editor or build step required. You describe your
 game as a `state`, a `render(state)` function, and a
-`nextState({ state, event, keyboard })` function — Yuuna owns the render
-loop, input handling, and canvas drawing.
+`nextState({ state, event, keyboard })` function — the reducer pattern
+(`(state, event) => nextState`, same shape as a Redux reducer or
+`useReducer`) — and Yuuna owns the render loop, input handling, and canvas
+drawing.
 
 ## Install
 
@@ -90,6 +92,10 @@ runEngine<GameState>({
   canvas config, and mechanics pipelines** all follow the same idea:
   small, focused props and functions `runEngine`/`nextState` take, that
   compose with everything above instead of replacing it.
+- **Mechanics pipelines** — `nextState` can be an array of small reducers
+  instead of one big function; each runs in order per event, the way
+  Redux middleware chains do, and any of them can return `STOP` to end
+  the pipeline early for that event.
 
 This README stays intentionally thin — the full concept-by-concept
 reference, with every option and example, lives on the
