@@ -158,6 +158,10 @@ Currently used:
   by [ansimuz](https://ansimuz.itch.io/) — the fox (idle/walk/jump), the
   ground/platform tile, and the parallax sky background in the
   Platformer example.
+- **[Mini Pixel Pack 3](https://grafxkid.itch.io/mini-pixel-pack-3)** by
+  [GrafxKid](https://grafxkid.itch.io/) — the ship, the charged-beam
+  bullet, Alan (the enemy), and the parallax starfield in the Shoot Em
+  Up example.
 
 ## License
 

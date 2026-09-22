@@ -1,0 +1,9 @@
+Mini Pixel Pack 3
+by GrafxKid
+https://grafxkid.itch.io/mini-pixel-pack-3
+
+Used by the Shoot Em Up example (examples/shoot-em-up.ts):
+  ship.png       — the player ship (the pack's middle frame)
+  beam.png       — the player's charged beam, used as the bullet
+  alan.png       — Alan, used as the enemy
+  starfield.png  — the scrolling space background

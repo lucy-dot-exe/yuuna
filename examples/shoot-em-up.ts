@@ -4,14 +4,35 @@
 const CANVAS_WIDTH = 960;
 const CANVAS_HEIGHT = 600;
 
-const SHIP_RADIUS = 16;
-const BULLET_RADIUS = 4;
+// Shared by every sprite below except the starfield (its own tiling below
+// wants a size that divides the canvas width evenly, unrelated to this)
+const SCALE = 2;
+
+const SHIP_FRAME_SIZE = 16; // native pixels, before SCALE
+const SHIP_RADIUS = (SHIP_FRAME_SIZE * SCALE) / 2;
+
+const BEAM_FRAME_WIDTH = 8; // native pixels, before SCALE
+const BEAM_FRAME_HEIGHT = 16;
+const BULLET_RADIUS = (BEAM_FRAME_WIDTH * SCALE) / 2;
 const BULLET_SPEED = 0.6; // pixels per millisecond
 const FIRE_INTERVAL = 220; // milliseconds between shots while held down
 
-const ENEMY_RADIUS = 14;
+const ALAN_FRAME_SIZE = 16; // native pixels, before SCALE
+const ENEMY_RADIUS = (ALAN_FRAME_SIZE * SCALE) / 2;
 const ENEMY_SPEED = 0.12; // pixels per millisecond
 const ENEMY_SPAWN_INTERVAL = 700; // milliseconds, randomized a bit per spawn
+
+// The starfield tiles both directions: sideways to fill the canvas width
+// (there's no horizontal scroll, just enough copies to cover it), and
+// vertically as two layers scrolling at different speeds past each other
+// for a parallax depth effect — see starLayer below.
+const STAR_NATIVE_WIDTH = 128;
+const STAR_NATIVE_HEIGHT = 64;
+const STAR_SCALE = 2.5; // 320px wide — 960 / 320 = 3 columns, exactly
+const STAR_TILE_WIDTH = STAR_NATIVE_WIDTH * STAR_SCALE;
+const STAR_TILE_HEIGHT = STAR_NATIVE_HEIGHT * STAR_SCALE;
+const STAR_COLUMNS = Math.ceil(CANVAS_WIDTH / STAR_TILE_WIDTH);
+const STAR_ROWS = Math.ceil(CANVAS_HEIGHT / STAR_TILE_HEIGHT) + 1; // +1 to cover the scroll wrap
 
 type Bullet = { id: number; x: number; y: number };
 type Enemy = { id: number; x: number; y: number };
@@ -27,6 +48,7 @@ type GameState = {
   spawnTimer: number;
   score: number;
   gameOver: boolean;
+  elapsed: number; // drives the starfield's scroll — see advanceTime/starLayer
 };
 
 // Create the initial state
@@ -40,6 +62,7 @@ const initialState: GameState = {
   spawnTimer: ENEMY_SPAWN_INTERVAL,
   score: 0,
   gameOver: false,
+  elapsed: 0,
 };
 
 const distance = (a: { x: number; y: number }, b: { x: number; y: number }) => {
@@ -48,10 +71,48 @@ const distance = (a: { x: number; y: number }, b: { x: number; y: number }) => {
   return Math.sqrt(dx * dx + dy * dy);
 };
 
+// Every position in state (ship/bullets/enemies) is a center, matching
+// the circle hit-testing distance() above already assumes — SPRITE's own
+// position is a top-left corner instead, so this is the one conversion
+// point between the two, given a sprite's full display width/height
+const topLeftOf = (center: { x: number; y: number }, width: number, height: number) => ({
+  x: center.x - width / 2,
+  y: center.y - height / 2,
+});
+
+// Two copies of the same starfield, scrolling downward at different
+// speeds — the faster, fully-opaque one reads as closer, the slower,
+// dimmer one as further away
+const starLayer = (elapsed: number, speed: number, opacity: number): Renderable[] => {
+  // Rounded to a whole pixel — elapsed*speed is essentially never an
+  // integer, and with pixel art's smoothing disabled, tiles stacked at a
+  // fractional y can leave a 1px seam where two of them don't quite meet
+  // (same fix as the Platformer's parallax background).
+  const offsetY = Math.round((elapsed * speed) % STAR_TILE_HEIGHT);
+
+  const tiles: Renderable[] = [];
+  for (let row = 0; row < STAR_ROWS; row++) {
+    for (let col = 0; col < STAR_COLUMNS; col++) {
+      tiles.push(
+        Yuuna.sprite({
+          resourceId: "starfield",
+          opacity,
+          scale: { x: STAR_SCALE, y: STAR_SCALE },
+          position: { x: col * STAR_TILE_WIDTH, y: row * STAR_TILE_HEIGHT - STAR_TILE_HEIGHT + offsetY },
+        })
+      );
+    }
+  }
+  return tiles;
+};
+
 // Create a function that renders the game, based on the state
 type RenderFunction = (state: GameState) => { cursor?: "none"; renderables: Renderable[] };
 const render: RenderFunction = (state) => {
   const renderables: Renderable[] = [
+    ...starLayer(state.elapsed, 0.03, 0.5), // far layer: slow, dim
+    ...starLayer(state.elapsed, 0.08, 1), // near layer: fast, full brightness
+
     // Covers the whole canvas so MOUSE_MOVE keeps reporting the cursor's
     // position no matter where it is — that's how the ship "follows the
     // mouse" without the engine needing a raw, always-on mouse-position
@@ -66,28 +127,29 @@ const render: RenderFunction = (state) => {
     }),
 
     ...state.enemies.map((enemy) =>
-      Yuuna.circle({
-        color: "#e05a4b",
-        position: { x: enemy.x, y: enemy.y },
-        radius: ENEMY_RADIUS,
+      Yuuna.animatedSprite({
+        id: `enemy-${enemy.id}`,
+        resourceId: "alan",
+        animation: "idle",
+        scale: { x: SCALE, y: SCALE },
+        position: topLeftOf(enemy, ALAN_FRAME_SIZE * SCALE, ALAN_FRAME_SIZE * SCALE),
       })
     ),
 
     ...state.bullets.map((bullet) =>
-      Yuuna.circle({
-        color: "#ffd76a",
-        position: { x: bullet.x, y: bullet.y },
-        radius: BULLET_RADIUS,
+      Yuuna.sprite({
+        resourceId: "beam",
+        frame: 2, // the charged (not still-charging) pose — see the resource comment below
+        scale: { x: SCALE, y: SCALE },
+        position: topLeftOf(bullet, BEAM_FRAME_WIDTH * SCALE, BEAM_FRAME_HEIGHT * SCALE),
       })
     ),
 
-    // The ship itself — a cockpit circle nested inside the hull so it
-    // rides along at the same position without repeating state.ship.x/y
-    Yuuna.circle({
-      color: "#4fc3f7",
-      position: state.ship,
-      radius: SHIP_RADIUS,
-      children: [Yuuna.circle({ color: "#0d1831", position: { x: 0, y: 0 }, radius: SHIP_RADIUS / 2 })],
+    Yuuna.sprite({
+      resourceId: "ship",
+      frame: 1, // the middle of its three frames
+      scale: { x: SCALE, y: SCALE },
+      position: topLeftOf(state.ship, SHIP_FRAME_SIZE * SCALE, SHIP_FRAME_SIZE * SCALE),
     }),
 
     Yuuna.text({ text: `Score: ${state.score}`, color: "white", position: { x: 20, y: 20 } }),
@@ -126,6 +188,12 @@ const render: RenderFunction = (state) => {
 const freezeOnGameOver: NextStateFunction<GameState> = ({ state }) => {
   if (state.gameOver) {
     return Yuuna.STOP;
+  }
+};
+
+const advanceTime: NextStateFunction<GameState> = ({ state, event }) => {
+  if (event.tag === "TIME") {
+    return { ...state, elapsed: state.elapsed + event.delta };
   }
 };
 
@@ -247,6 +315,7 @@ Yuuna.runEngine<GameState>({
   render,
   nextState: [
     freezeOnGameOver,
+    advanceTime,
     followMouse,
     fireBullets,
     moveBullets,
@@ -257,4 +326,37 @@ Yuuna.runEngine<GameState>({
   ],
 
   canvas: { width: CANVAS_WIDTH, height: CANVAS_HEIGHT, backgroundColor: "#0d1831" },
+
+  // Ship, beam, Alan, and the starfield: Mini Pixel Pack 3 by GrafxKid —
+  // https://grafxkid.itch.io/mini-pixel-pack-3
+  resources: {
+    ship: {
+      src: "./resources/mini-pixel-pack-3/ship.png",
+      size: { width: SHIP_FRAME_SIZE * 3, height: SHIP_FRAME_SIZE },
+      slices: { horizontal: 3, vertical: 1 },
+    },
+    // 4 frames: 0-1 are the beam charging up, 2-3 are it fully charged —
+    // render() above always shows frame 2, the charged pose, as the shot
+    beam: {
+      src: "./resources/mini-pixel-pack-3/beam.png",
+      size: { width: BEAM_FRAME_WIDTH * 4, height: BEAM_FRAME_HEIGHT },
+      slices: { horizontal: 4, vertical: 1 },
+    },
+    alan: {
+      src: "./resources/mini-pixel-pack-3/alan.png",
+      size: { width: ALAN_FRAME_SIZE * 6, height: ALAN_FRAME_SIZE },
+      slices: { horizontal: 6, vertical: 1 },
+      animations: {
+        idle: {
+          frames: [0, 1, 2, 3, 4, 5],
+          frameDuration: 150,
+          loop: true,
+        },
+      },
+    },
+    starfield: {
+      src: "./resources/mini-pixel-pack-3/starfield.png",
+      size: { width: STAR_NATIVE_WIDTH, height: STAR_NATIVE_HEIGHT },
+    },
+  },
 });

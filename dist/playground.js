@@ -40,6 +40,8 @@ const EXAMPLES = [
     label: "Food Clicker",
     category: "games",
     description: "Beat the 15-second clock — catching food fast builds a combo that's worth more and spawns faster.",
+    // Free Pixel Food! by Henry Software, credited in main.ts and the README
+    assets: [{ name: "food.png", path: "./resources/pixel-food/food.png" }],
   },
   {
     id: "platformer",
@@ -62,6 +64,13 @@ const EXAMPLES = [
     label: "Shoot Em Up",
     category: "games",
     description: "The ship follows your mouse — hold the button down to fire at enemies falling from the top.",
+    // Mini Pixel Pack 3 by GrafxKid, credited in shoot-em-up.ts and the README
+    assets: [
+      { name: "ship.png", path: "./resources/mini-pixel-pack-3/ship.png" },
+      { name: "beam.png", path: "./resources/mini-pixel-pack-3/beam.png" },
+      { name: "alan.png", path: "./resources/mini-pixel-pack-3/alan.png" },
+      { name: "starfield.png", path: "./resources/mini-pixel-pack-3/starfield.png" },
+    ],
   },
   {
     id: "camera",

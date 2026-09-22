@@ -17,3 +17,4 @@ dist/resources/*
 !dist/resources/yuunas-heroes*.png
 !dist/resources/sunnyland/
 !dist/resources/pixel-food/
+!dist/resources/mini-pixel-pack-3/
