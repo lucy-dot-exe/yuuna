@@ -154,20 +154,23 @@ run without them — just with placeholder art in place of the real
 thing. Drop the real files in locally (or restore them from wherever
 you got this repo from) to see them for real.
 
+Only MIT- or CC0-licensed assets are used, so nothing here needs
+attribution to run or redistribute — the credits below are given by
+choice, not requirement.
+
 Currently used:
 
 - **[Free Pixel Food!](https://henrysoftware.itch.io/pixel-food)** by
   [Henry Software](https://henrysoftware.itch.io/) — the food icons in
-  the Food Clicker and Sprites examples. CC0; credited here by choice,
-  not requirement.
+  the Food Clicker and Sprites examples. CC0.
 - **[Sunny Land Pixel Game Art](https://ansimuz.itch.io/sunny-land-pixel-game-art)**
   by [ansimuz](https://ansimuz.itch.io/) — the fox (idle/walk/jump), the
   ground/platform tile, and the parallax sky background in the
-  Platformer example.
+  Platformer example. CC0.
 - **[Mini Pixel Pack 3](https://grafxkid.itch.io/mini-pixel-pack-3)** by
   [GrafxKid](https://grafxkid.itch.io/) — the ship, the charged-beam
   bullet, Alan (the enemy), and the parallax starfield in the Shoot Em
-  Up example.
+  Up example. CC0.
 
 ## License
 
