@@ -9,6 +9,7 @@ import {
   GameEvent,
   KeyboardState,
   Renderable,
+  ResourceConfig,
   RunEngineFunction,
   RunEngineProps,
   STOP,
@@ -78,6 +79,54 @@ const createPlaceholderSheet = (size: { width: number; height: number }): HTMLCa
 // all. An arbitrary, small-but-visible size, purely so the placeholder
 // still draws as *something* instead of a 0x0/NaN canvas.
 const DEFAULT_PLACEHOLDER_SIZE = { width: 64, height: 64 };
+
+type ResourceEntry = {
+  image: CanvasImageSource;
+  size: { width: number; height: number };
+  slices: { horizontal: number; vertical: number };
+  animations: Record<string, { frames: number[]; frameDuration: number; loop: boolean }>;
+};
+
+// Loads a single resources[id] entry into a ResourceEntry — shared by the
+// startup resources (below) and addResource (returned from runEngine, at
+// the bottom of this file) so a resource registered later loads exactly
+// the same way, placeholder fallback included.
+const loadResource = (value: ResourceConfig): Promise<ResourceEntry> =>
+  new Promise<ResourceEntry>((resolve) => {
+    const image = new Image();
+
+    // A single, unsliced image (1x1) if unset — only an actual
+    // spritesheet needs this declared.
+    const slices = value.slices ?? { horizontal: 1, vertical: 1 };
+
+    // sheetSize is the whole loaded sheet's pixel dimensions — value's
+    // declared `size` if set, otherwise whatever the image actually
+    // measures once it's loaded (or DEFAULT_PLACEHOLDER_SIZE if even
+    // that isn't available, i.e. no `size` declared *and* the image
+    // failed to load too).
+    const settle = (loadedImage: CanvasImageSource, sheetSize: { width: number; height: number }) => {
+      resolve({
+        image: loadedImage,
+        size: {
+          width: sheetSize.width / slices.horizontal,
+          height: sheetSize.height / slices.vertical,
+        },
+        slices,
+        animations: value.animations ?? {},
+      });
+    };
+
+    image.src = value.src;
+    image.onload = () => settle(image, value.size ?? { width: image.naturalWidth, height: image.naturalHeight });
+    // Missing/failed-to-load asset (see .gitignore's dist/resources/
+    // note) — a placeholder sheet, sized to match what this resource
+    // declared, keeps every frame/slice/animation index the caller
+    // already computes valid instead of drawing nothing or throwing.
+    image.onerror = () => {
+      const placeholderSize = value.size ?? DEFAULT_PLACEHOLDER_SIZE;
+      settle(createPlaceholderSheet(placeholderSize), placeholderSize);
+    };
+  });
 
 export const runEngine: RunEngineFunction = async <State, Custom = never>(
   props: RunEngineProps<State, Custom>
@@ -198,51 +247,15 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   };
 
   const resources = props.resources ?? {};
-  const resourceById = await iterateRecordAsync(
-    resources,
-    async ({ value }) =>
-      new Promise<{
-        image: CanvasImageSource;
-        size: { width: number; height: number };
-        slices: { horizontal: number; vertical: number };
-        animations: Record<string, { frames: number[]; frameDuration: number; loop: boolean }>;
-      }>((resolve) => {
-        const image = new Image();
+  const resourceById = await iterateRecordAsync(resources, ({ value }) => loadResource(value));
 
-        // A single, unsliced image (1x1) if unset — only an actual
-        // spritesheet needs this declared.
-        const slices = value.slices ?? { horizontal: 1, vertical: 1 };
-
-        // sheetSize is the whole loaded sheet's pixel dimensions — value's
-        // declared `size` if set, otherwise whatever the image actually
-        // measures once it's loaded (or DEFAULT_PLACEHOLDER_SIZE if even
-        // that isn't available, i.e. no `size` declared *and* the image
-        // failed to load too).
-        const settle = (loadedImage: CanvasImageSource, sheetSize: { width: number; height: number }) => {
-          resolve({
-            image: loadedImage,
-            size: {
-              width: sheetSize.width / slices.horizontal,
-              height: sheetSize.height / slices.vertical,
-            },
-            slices,
-            animations: value.animations ?? {},
-          });
-        };
-
-        image.src = value.src;
-        image.onload = () =>
-          settle(image, value.size ?? { width: image.naturalWidth, height: image.naturalHeight });
-        // Missing/failed-to-load asset (see .gitignore's dist/resources/
-        // note) — a placeholder sheet, sized to match what this resource
-        // declared, keeps every frame/slice/animation index the example
-        // already computes valid instead of drawing nothing or throwing.
-        image.onerror = () => {
-          const placeholderSize = value.size ?? DEFAULT_PLACEHOLDER_SIZE;
-          settle(createPlaceholderSheet(placeholderSize), placeholderSize);
-        };
-      })
-  );
+  // Registers a resource after startup — loads it exactly like the
+  // resources above (loadResource is the same function), then adds it to
+  // the same resourceById map every SPRITE/ANIMATED_SPRITE lookup already
+  // reads from, so it's usable by `resourceId` as soon as this resolves.
+  const addResource = async (id: string, resource: ResourceConfig) => {
+    resourceById[id] = await loadResource(resource);
+  };
 
   const loadAudio = (src: string) =>
     new Promise<HTMLAudioElement>((resolve) => {
@@ -342,7 +355,12 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   // fullscreen functions are no-ops here since this run never gets far
   // enough to own the canvas — the newer run's are the ones that matter.
   if (runId !== latestRunId) {
-    return { sendEvent, requestFullscreen: () => Promise.resolve(), exitFullscreen: () => Promise.resolve() };
+    return {
+      sendEvent,
+      requestFullscreen: () => Promise.resolve(),
+      exitFullscreen: () => Promise.resolve(),
+      addResource,
+    };
   }
 
   context.imageSmoothingEnabled = false;
@@ -1446,5 +1464,5 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     window.removeEventListener("resize", applyResize);
   };
 
-  return { sendEvent, requestFullscreen, exitFullscreen };
+  return { sendEvent, requestFullscreen, exitFullscreen, addResource };
 };

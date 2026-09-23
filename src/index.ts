@@ -7,6 +7,7 @@ export type {
   NextStateFunction,
   NextStateProps,
   Renderable,
+  ResourceConfig,
   GameEvent,
   CustomGameEvent,
 } from "./engine/types";

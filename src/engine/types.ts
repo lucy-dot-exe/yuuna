@@ -310,6 +310,41 @@ export type NextStateFunction<State, Custom = never> = (
   props: NextStateProps<State, Custom>
 ) => State | typeof STOP | undefined;
 
+// A single resources[id] entry — also what addResource (see
+// RunEngineFunction's return type below) takes to register a new one
+// after the engine's already running.
+export type ResourceConfig = {
+  src: string;
+  // Defaults to the loaded image's own dimensions if unset — the
+  // common case (one sprite, not a sheet, or a sheet where whatever
+  // exported it can be trusted to match the source art exactly).
+  // Still worth setting explicitly when you want the engine to catch
+  // a mismatch (e.g. size doesn't evenly divide by slices below) or
+  // the sheet might load as a placeholder (see runEngine.ts's
+  // createPlaceholderSheet) before you know its real dimensions.
+  size?: { width: number; height: number };
+  // Defaults to { horizontal: 1, vertical: 1 } — a single, unsliced
+  // image — if unset. Only needs setting for an actual spritesheet.
+  slices?: { vertical: number; horizontal: number };
+  // Named animations for this spritesheet — reference one by name
+  // from an ANIMATED_SPRITE renderable's `animation` field.
+  animations?: Record<
+    string,
+    {
+      // Which frames (in the same numbering SPRITE's `frame` uses)
+      // to play, in order. Can repeat/skip/reorder frames.
+      frames: number[];
+      // Milliseconds each frame is shown, before timeScale.
+      frameDuration: number;
+      // false holds on the last frame once played through, instead
+      // of restarting — required rather than defaulted, since
+      // getting this wrong silently (e.g. an explosion looping
+      // forever) is an easy, confusing mistake.
+      loop: boolean;
+    }
+  >;
+};
+
 export type RunEngineProps<State, Custom = never> = {
   initialState: State;
   render: (state: State) => {
@@ -325,40 +360,7 @@ export type RunEngineProps<State, Custom = never> = {
   // one large nextState. A list is just composable reducers: each
   // mechanic is its own (state, event) => state, run in a pipeline.
   nextState: NextStateFunction<State, Custom> | NextStateFunction<State, Custom>[];
-  resources?: Record<
-    string,
-    {
-      src: string;
-      // Defaults to the loaded image's own dimensions if unset — the
-      // common case (one sprite, not a sheet, or a sheet where whatever
-      // exported it can be trusted to match the source art exactly).
-      // Still worth setting explicitly when you want the engine to catch
-      // a mismatch (e.g. size doesn't evenly divide by slices below) or
-      // the sheet might load as a placeholder (see runEngine.ts's
-      // createPlaceholderSheet) before you know its real dimensions.
-      size?: { width: number; height: number };
-      // Defaults to { horizontal: 1, vertical: 1 } — a single, unsliced
-      // image — if unset. Only needs setting for an actual spritesheet.
-      slices?: { vertical: number; horizontal: number };
-      // Named animations for this spritesheet — reference one by name
-      // from an ANIMATED_SPRITE renderable's `animation` field.
-      animations?: Record<
-        string,
-        {
-          // Which frames (in the same numbering SPRITE's `frame` uses)
-          // to play, in order. Can repeat/skip/reorder frames.
-          frames: number[];
-          // Milliseconds each frame is shown, before timeScale.
-          frameDuration: number;
-          // false holds on the last frame once played through, instead
-          // of restarting — required rather than defaulted, since
-          // getting this wrong silently (e.g. an explosion looping
-          // forever) is an easy, confusing mistake.
-          loop: boolean;
-        }
-      >;
-    }
-  >;
+  resources?: Record<string, ResourceConfig>;
   // Sound effects, keyed by an id you pick — play one from a
   // NextStateFunction with the `playSound(id)` prop it receives.
   sounds?: Record<string, { src: string }>;
@@ -455,6 +457,16 @@ export type RunEngineFunction = <State, Custom = never>(
   // Exits fullscreen, however it was entered. A no-op (resolved promise)
   // if nothing is currently fullscreen.
   exitFullscreen: () => Promise<void>;
+  // Registers a resource under `id` after the engine's already running —
+  // for art that isn't known until runtime (a level loaded later, a
+  // user-supplied skin, ...) instead of everything having to be listed
+  // upfront in RunEngineProps.resources. Loads the same way startup
+  // resources do (including falling back to a placeholder sheet if the
+  // image fails to load), and the returned Promise resolves once it's
+  // ready to reference by `resourceId` from a SPRITE/ANIMATED_SPRITE —
+  // await it before rendering one, or race it (a placeholder still draws
+  // in the meantime). Registering the same `id` again replaces it.
+  addResource: (id: string, resource: ResourceConfig) => Promise<void>;
 }>;
 
 export const keyboardKeys = [
