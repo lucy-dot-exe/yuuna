@@ -435,6 +435,19 @@ export type RunEngineProps<State, Custom = never> = {
   // the interval driving the loop itself) — only the *simulated* passage
   // of time this controls.
   timeScale?: (state: State) => number;
+  // Caps how many ticks per second the engine runs — each tick being one
+  // round of nextState plus one draw — recomputed every tick from state,
+  // so a game can drive it live (a settings menu's FPS option, a
+  // low-power mode, ...) instead of only setting it once at boot. Ticks
+  // that would come too early are skipped outright rather than delayed:
+  // input still queues up in the meantime and is delivered on the next
+  // tick that does run, and that tick's TIME `delta` spans the whole gap
+  // since the last one, so game logic and animation playback stay in
+  // step with real time regardless of the cap. Individual ticks can come
+  // a few milliseconds early or late (the loop only checks every ~4ms),
+  // but they average out to the cap itself. Missing/undefined, Infinity
+  // or anything <= 0 keeps today's uncapped behavior.
+  maxFps?: (state: State) => number;
 };
 
 export type RunEngineFunction = <State, Custom = never>(

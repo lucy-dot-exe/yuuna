@@ -158,6 +158,12 @@ const EXAMPLES = [
     category: "feature",
     description: "requestFullscreen/exitFullscreen wrap the Fullscreen API on the canvas — click to go fullscreen, Esc (or click again) to leave.",
   },
+  {
+    id: "max-fps",
+    label: "Max FPS",
+    category: "feature",
+    description: "maxFps caps the tick rate live from state — pick a cap and watch the ball get choppier while keeping the same speed.",
+  },
 ];
 
 function renderExamplesGrid() {

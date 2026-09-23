@@ -742,6 +742,9 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   const nextStateFns = Array.isArray(props.nextState) ? props.nextState : [props.nextState];
 
   let lastFrame: number = Date.now();
+  // When the next tick is due under RunEngineProps.maxFps — only read
+  // or advanced while a cap is set (see the top of the loop below).
+  let nextTickAt = 0;
   let hoveredId: string | null = null;
 
   // How much this tick's simulated time is scaled by (see
@@ -1186,6 +1189,29 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   const intervalId = setInterval(() => {
     const now = Date.now();
     const rawDelta = now - lastFrame;
+
+    // Skipped rather than delayed (see RunEngineProps.maxFps) — returning
+    // before anything else runs leaves `events`, keyboard/mouse state and
+    // lastFrame all untouched, so whatever happened in the meantime is
+    // still delivered by the next tick that does run, and its TIME delta
+    // covers this skipped one too.
+    const maxFps = props.maxFps?.(state);
+    if (maxFps !== undefined && maxFps > 0) {
+      if (now < nextTickAt) {
+        return;
+      }
+
+      // Scheduled from the previous target rather than from `now`: the
+      // interval only fires every ~4ms, so "at least 1000/maxFps since
+      // the last tick" would always round late (a 60 cap landing on
+      // 20ms ticks, i.e. 50 FPS), while this lets the early and late
+      // ticks average out to the cap itself. Falling more than a whole
+      // interval behind (a hitch, a backgrounded tab, the cap having
+      // just been turned on) restarts the schedule from now instead of
+      // bursting through every missed tick to catch up.
+      const interval = 1000 / maxFps;
+      nextTickAt = now - nextTickAt > interval ? now + interval : nextTickAt + interval;
+    }
 
     // Read from state as this tick starts (i.e. still last tick's own
     // result) — resolveAnimatedSprite (below, during this same tick's
