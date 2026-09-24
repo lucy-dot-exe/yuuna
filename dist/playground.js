@@ -159,6 +159,12 @@ const EXAMPLES = [
     description: "requestFullscreen/exitFullscreen wrap the Fullscreen API on the canvas — click to go fullscreen, Esc (or click again) to leave.",
   },
   {
+    id: "mouse-buttons",
+    label: "Mouse Buttons",
+    category: "feature",
+    description: "RIGHT_CLICK and rightMouseButton give the right mouse button the same click and held-state support the left one has.",
+  },
+  {
     id: "max-fps",
     label: "Max FPS",
     category: "feature",

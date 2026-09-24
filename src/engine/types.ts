@@ -159,6 +159,21 @@ export type ClickEvent = {
   worldMouse: { x: number; y: number };
 };
 
+// CLICK's counterpart for the secondary (usually right) mouse button —
+// fires on the same terms (an isClickable renderable under the cursor)
+// and carries the same fields. A separate tag rather than a `button`
+// field on CLICK, so existing CLICK handlers never start reacting to
+// right clicks. Driven by the browser's contextmenu event, which is also
+// what Ctrl+click fires on macOS. Mouse only — touch has no secondary
+// button to map it from. See RunEngineProps.canvas.disableContextMenu for
+// the browser menu that would otherwise open alongside it.
+export type RightClickEvent = {
+  tag: "RIGHT_CLICK";
+  id?: string;
+  mouse: { x: number; y: number };
+  worldMouse: { x: number; y: number };
+};
+
 export type HoverInEvent = {
   tag: "HOVER_IN";
   id?: string;
@@ -218,6 +233,7 @@ export type FullscreenChangeEvent = { tag: "FULLSCREEN_CHANGE"; isFullscreen: bo
 export type GameEvent =
   | TimeEvent
   | ClickEvent
+  | RightClickEvent
   | HoverInEvent
   | HoverOutEvent
   | MouseMoveEvent
@@ -253,8 +269,18 @@ export type NextStateProps<State, Custom = never> = {
   // Distinct from a GameEvent's own `mouse`/`worldMouse` fields (the
   // cursor's *position* at that event) — this is about the button
   // itself, not where the pointer is. Only the primary button is
-  // tracked, matching how CLICK itself already only fires for it.
+  // tracked, matching how CLICK itself already only fires for it — see
+  // rightMouseButton for the secondary one.
   mouseButton: {
+    isPressed: boolean;
+    isJustPressed: boolean;
+    isJustReleased: boolean;
+  };
+  // mouseButton's counterpart for the secondary (usually right) mouse
+  // button, the same way RIGHT_CLICK is CLICK's — e.g. hold right to aim
+  // or drag the camera. Mouse only: touch drives mouseButton and never
+  // this.
+  rightMouseButton: {
     isPressed: boolean;
     isJustPressed: boolean;
     isJustReleased: boolean;
@@ -396,6 +422,13 @@ export type RunEngineProps<State, Custom = never> = {
     // Left as a caller choice rather than an engine default since it's a
     // real visual trade-off specific to each game.
     resize?: "none" | "fit" | "stretch";
+    // Stops the browser's own context menu from opening when the canvas
+    // is right-clicked, so a game can use the right button (RIGHT_CLICK,
+    // rightMouseButton) without a menu popping up over it every time.
+    // On by default — set false to get the browser's menu back (e.g. for
+    // "Save image as..."). RIGHT_CLICK and rightMouseButton work either
+    // way; this only decides whether the menu opens too.
+    disableContextMenu?: boolean;
     // Scales the canvas's backing buffer beyond width/height, without
     // changing any renderable's coordinate space — every position in
     // render() (and every mouse/touch coordinate) stays expressed in

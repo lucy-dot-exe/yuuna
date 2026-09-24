@@ -84,7 +84,7 @@ runEngine<GameState>({
   `CIRCLE`, `TEXT`, `SPRITE`, `ANIMATED_SPRITE`, `LINE`, and `GROUP`. Give
   one an `id` plus `isClickable`/`isHoverable` to make it interactive.
 - **Events** — `nextState` receives one `GameEvent` per call: `TIME`,
-  `CLICK`, `HOVER_IN`, `HOVER_OUT`, `MOUSE_MOVE`, `MOUSE_LEAVE`,
+  `CLICK`, `RIGHT_CLICK`, `HOVER_IN`, `HOVER_OUT`, `MOUSE_MOVE`, `MOUSE_LEAVE`,
   `MUSIC_END`, or a `CUSTOM` event of a type you define yourself, for
   reporting things like an async `fetch()` resolving back into your
   state machine.

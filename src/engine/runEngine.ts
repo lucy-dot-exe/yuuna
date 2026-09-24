@@ -756,11 +756,12 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   // separately (state may itself have just changed this same tick).
   let currentTimeScale = 1;
 
-  // Shared by the mouse "click" listener and the touch handlers below —
-  // firing a CLICK is the same "is whatever's currently hovered
-  // isClickable" check either way; only how `mouse` was determined
-  // differs (a real click event vs. a lifted finger).
-  const fireClick = (mouse: Position) => {
+  // Shared by the mouse "click"/"contextmenu" listeners and the touch
+  // handlers below — firing a CLICK (or RIGHT_CLICK) is the same "is
+  // whatever's currently hovered isClickable" check either way; only how
+  // `mouse` was determined differs (a real click event vs. a lifted
+  // finger), and which button it was.
+  const fireClick = (mouse: Position, tag: "CLICK" | "RIGHT_CLICK" = "CLICK") => {
     if (hoveredId === null) return;
 
     const { renderables, camera } = renderState(state);
@@ -768,13 +769,27 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     const hovered = renderables.find((e) => e.id === hoveredId);
 
     if (hovered !== undefined && hovered.isClickable) {
-      events.push({ tag: "CLICK", id: hovered.id, mouse, worldMouse: toWorldPosition(mouse, camera) });
+      events.push({ tag, id: hovered.id, mouse, worldMouse: toWorldPosition(mouse, camera) });
     }
   };
 
   const handleClick = (ev: MouseEvent) => fireClick(getCanvasPosition(ev));
 
   canvas.addEventListener("click", handleClick);
+
+  // contextmenu rather than mouseup with button 2 — it's the browser's
+  // own "secondary click" (Ctrl+click on macOS included), the same way
+  // "click" above is its primary one, and it's the event that has to be
+  // cancelled to keep the browser's menu from opening anyway.
+  const handleContextMenu = (ev: MouseEvent) => {
+    if (props.canvas?.disableContextMenu ?? true) {
+      ev.preventDefault();
+    }
+
+    fireClick(getCanvasPosition(ev), "RIGHT_CLICK");
+  };
+
+  canvas.addEventListener("contextmenu", handleContextMenu);
 
   const initialState: { keyboardState: KeyboardState } = {
     keyboardState: createRecord(keyboardKeys, () => false),
@@ -813,16 +828,20 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
   canvas.addEventListener("keyup", handleKeyUp);
 
-  // mouseButton state (see NextStateProps.mouseButton) — a double-buffer
-  // exactly like keyboardState above, just for the primary mouse button.
+  // mouseButton/rightMouseButton state (see NextStateProps.mouseButton)
+  // — double-buffers exactly like keyboardState above, one per button.
   let previousMouseButtonState = { isPressed: false };
   const currentMouseButtonState = { isPressed: false };
+  let previousRightMouseButtonState = { isPressed: false };
+  const currentRightMouseButtonState = { isPressed: false };
 
   const handleMouseDown = (event: MouseEvent) => {
-    // Left/primary button only — matching CLICK, which already only
-    // ever fires for it.
+    // Primary and secondary buttons only — matching CLICK and
+    // RIGHT_CLICK respectively. Middle/back/forward stay ignored.
     if (event.button === 0) {
       currentMouseButtonState.isPressed = true;
+    } else if (event.button === 2) {
+      currentRightMouseButtonState.isPressed = true;
     }
   };
 
@@ -831,6 +850,8 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   const handleMouseUp = (event: MouseEvent) => {
     if (event.button === 0) {
       currentMouseButtonState.isPressed = false;
+    } else if (event.button === 2) {
+      currentRightMouseButtonState.isPressed = false;
     }
   };
 
@@ -1243,12 +1264,19 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
         isJustReleased: !currentMouseButtonState.isPressed && previousMouseButtonState.isPressed,
       };
 
+      const rightMouseButton = {
+        isPressed: currentRightMouseButtonState.isPressed,
+        isJustPressed: currentRightMouseButtonState.isPressed && !previousRightMouseButtonState.isPressed,
+        isJustReleased: !currentRightMouseButtonState.isPressed && previousRightMouseButtonState.isPressed,
+      };
+
       for (const nextState of nextStateFns) {
         const result = nextState({
           state,
           event,
           keyboard,
           mouseButton,
+          rightMouseButton,
           playSound,
           playMusic,
           pauseMusic,
@@ -1444,6 +1472,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     lastFrame = now;
     previousState.keyboardState = { ...currentState.keyboardState };
     previousMouseButtonState = { ...currentMouseButtonState };
+    previousRightMouseButtonState = { ...currentRightMouseButtonState };
   }, 0);
 
   resetCanvas = () => {
@@ -1468,6 +1497,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     // slow enough device or long enough playground session, that pile-up
     // is what "clicks stop working" actually looks like.
     canvas.removeEventListener("click", handleClick);
+    canvas.removeEventListener("contextmenu", handleContextMenu);
     canvas.removeEventListener("keydown", handleKeyDown);
     canvas.removeEventListener("keyup", handleKeyUp);
     canvas.removeEventListener("mousedown", handleMouseDown);
