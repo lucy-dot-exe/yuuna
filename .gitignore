@@ -18,3 +18,6 @@ dist/resources/*
 !dist/resources/sunnyland/
 !dist/resources/pixel-food/
 !dist/resources/mini-pixel-pack-3/
+# Press Start 2P is under the SIL Open Font License, which allows
+# redistributing it alongside its OFL.txt.
+!dist/resources/press-start-2p/

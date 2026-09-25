@@ -22,7 +22,34 @@ let latestRunId = 0;
 // Shared between drawing TEXT renderables and hit-testing them for
 // clicks/hovers, so the clickable area always matches what's on screen.
 const DEFAULT_TEXT_FONT_SIZE = 30;
-const textFont = (fontSize: number) => `${fontSize}px Arial`;
+const DEFAULT_TEXT_FONT_FAMILY = "Arial";
+
+// CSS keywords rather than font names — quoting one (`"serif"`) would
+// look for a font actually called "serif" instead of the browser's
+// default serif font.
+const genericFontFamilies = new Set([
+  "serif",
+  "sans-serif",
+  "monospace",
+  "cursive",
+  "fantasy",
+  "system-ui",
+  "ui-serif",
+  "ui-sans-serif",
+  "ui-monospace",
+  "ui-rounded",
+  "emoji",
+  "math",
+  "fangsong",
+]);
+
+// Every other family is quoted, so names with spaces or digits work, and
+// followed by Arial as the fallback for one that isn't available.
+const textFont = (fontSize: number, fontFamily: string = DEFAULT_TEXT_FONT_FAMILY) => {
+  const family = genericFontFamilies.has(fontFamily) ? fontFamily : JSON.stringify(fontFamily);
+
+  return `${fontSize}px ${family}, ${DEFAULT_TEXT_FONT_FAMILY}`;
+};
 
 // Renderables with the same layer keep render()'s order — Array#sort is
 // stable — so `layer` only needs to move something relative to the rest,
@@ -257,6 +284,36 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     resourceById[id] = await loadResource(resource);
   };
 
+  // Loaded with the FontFace API and registered on document.fonts, which
+  // is what makes a family name usable from context.font. Awaiting load()
+  // here (instead of letting the browser load it lazily on first use) is
+  // what keeps the first frames from drawing — and hit-testing — text in
+  // the fallback font. A font that fails to load is never added, so its
+  // TEXT falls back to Arial, same as any other unavailable family.
+  const loadFont = async (family: string, src: string) => {
+    const face = new FontFace(family, `url(${JSON.stringify(src)})`);
+
+    try {
+      await face.load();
+      window.document.fonts.add(face);
+    } catch {}
+
+    return face;
+  };
+
+  const fonts = props.fonts ?? {};
+  const fontFaceById = await iterateRecordAsync(fonts, ({ key, value }) => loadFont(key, value.src));
+
+  // document.fonts belongs to the page, not to this run — so the fonts
+  // this run added are removed again when it ends (see resetCanvas and the
+  // abandoned-run check below), instead of every playground re-run adding
+  // another copy of the same family.
+  const removeFonts = () => {
+    for (const face of Object.values(fontFaceById)) {
+      window.document.fonts.delete(face);
+    }
+  };
+
   const loadAudio = (src: string) =>
     new Promise<HTMLAudioElement>((resolve) => {
       const audio = new Audio(src);
@@ -400,6 +457,8 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   // fullscreen functions are no-ops here since this run never gets far
   // enough to own the canvas — the newer run's are the ones that matter.
   if (runId !== latestRunId) {
+    removeFonts();
+
     return {
       sendEvent,
       requestFullscreen: () => Promise.resolve(),
@@ -681,7 +740,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
       // render loop below) — anchored the same way its `align` positions
       // it relative to `position`.
       const fontSize = r.fontSize ?? DEFAULT_TEXT_FONT_SIZE;
-      context.font = textFont(fontSize);
+      context.font = textFont(fontSize, r.fontFamily);
       const width = context.measureText(r.text).width;
       const height = fontSize;
 
@@ -1398,11 +1457,12 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
           text,
           align,
           fontSize,
+          fontFamily,
           modulate,
         } = renderable;
         context.fillStyle = modulate === undefined ? color : modulateColor(color, modulate);
 
-        context.font = textFont(fontSize ?? DEFAULT_TEXT_FONT_SIZE);
+        context.font = textFont(fontSize ?? DEFAULT_TEXT_FONT_SIZE, fontFamily);
         context.textAlign = align?.x ?? "left";
         context.textBaseline = align?.y ?? "top";
         context.fillText(text, x, y);
@@ -1531,6 +1591,8 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     // per-run element, not something the next run has any way to reach.
     currentMusic?.pause();
     currentMusic = null;
+
+    removeFonts();
 
     // The canvas element itself is only thrown away between runs if the
     // caller replaces it — in the playground it's the same persistent

@@ -59,6 +59,12 @@ export type TextRenderable = BaseRenderable & {
   align?: { x: "left" | "center" | "right"; y: "bottom" | "middle" | "top" };
   // Defaults to 30 (pixels) if unset
   fontSize?: number;
+  // A font family name: one loaded through RunEngineProps.fonts (by its
+  // key there), one the page already has (a system font like "Georgia",
+  // or one loaded by a stylesheet), or a generic family like "monospace"
+  // or "serif". Defaults to Arial, which is also the fallback while/if
+  // the named font isn't available.
+  fontFamily?: string;
 };
 
 export type SpriteRenderable = BaseRenderable & {
@@ -435,6 +441,13 @@ export type RunEngineProps<State, Custom = never> = {
       loop?: boolean;
     }
   >;
+  // Custom fonts, keyed by the family name TEXT renderables' fontFamily
+  // uses to pick one — e.g. `fonts: { Pixel: { src: "./pixel.woff2" } }`
+  // then `fontFamily: "Pixel"`. Any format the browser supports (woff2,
+  // woff, ttf, otf). All of them finish loading before the first frame,
+  // so text never measures/draws with a fallback font first; one that
+  // fails to load falls back to Arial instead of stopping the game.
+  fonts?: Record<string, { src: string }>;
   canvas?: {
     width?: number;
     height?: number;

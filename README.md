@@ -89,7 +89,7 @@ runEngine<GameState>({
   reporting things like an async `fetch()` resolving back into your
   state machine.
 - **Keyboard, camera, sprites & animation, sound effects & music,
-  canvas config, and mechanics pipelines** all follow the same idea:
+  custom fonts, canvas config, and mechanics pipelines** all follow the same idea:
   small, focused props and functions `runEngine`/`nextState` take, that
   compose with everything above instead of replacing it.
 - **Mechanics pipelines** — `nextState` can be an array of small reducers

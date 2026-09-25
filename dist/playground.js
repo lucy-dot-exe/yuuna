@@ -165,6 +165,12 @@ const EXAMPLES = [
     description: "RIGHT_CLICK and rightMouseButton give the right mouse button the same click and held-state support the left one has.",
   },
   {
+    id: "custom-fonts",
+    label: "Custom Fonts",
+    category: "feature",
+    description: "The fonts prop loads font files before the first frame, and a TEXT renderable's fontFamily picks one, a generic family, or the default Arial.",
+  },
+  {
     id: "max-fps",
     label: "Max FPS",
     category: "feature",
