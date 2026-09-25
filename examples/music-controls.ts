@@ -1,7 +1,7 @@
-// Music Controls — play/pause a looping background track and adjust its
-// volume and pitch, via playMusic()/pauseMusic()/setMusicVolume()/
-// setMusicPitch() (all props every NextStateFunction receives, alongside
-// state/event/keyboard).
+// Music Controls — play/pause/restart a looping background track and
+// adjust its volume and pitch, via playMusic()/pauseMusic()/
+// restartMusic()/setMusicVolume()/setMusicPitch() (all props every
+// NextStateFunction receives, alongside state/event/keyboard).
 
 const CANVAS_WIDTH = 960;
 const CANVAS_HEIGHT = 540;
@@ -11,12 +11,12 @@ const MAX_SEMITONES = 12;
 // Create a type for the state of your game
 // Pitch is kept in semitones (0 = normal) because that's the natural unit
 // for stepping it; setMusicPitch() itself takes a playback-rate multiplier
-type GameState = { isPlaying: boolean; volume: number; semitones: number };
+type GameState = { isPlaying: boolean; hasStarted: boolean; volume: number; semitones: number };
 
 // Create the initial state — isPlaying starts false: playMusic() needs a
 // user gesture (a click) to actually start audio in the browser, so
 // there's nothing to autoplay on load here
-const initialState: GameState = { isPlaying: false, volume: 0.6, semitones: 0 };
+const initialState: GameState = { isPlaying: false, hasStarted: false, volume: 0.6, semitones: 0 };
 
 const CENTER = { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 };
 
@@ -36,7 +36,21 @@ const render: RenderFunction = (state) => {
         isClickable: true,
         id: "toggle",
 
-        position: { x: CENTER.x, y: CENTER.y - 40 },
+        position: { x: CENTER.x - 90, y: CENTER.y - 40 },
+        align: { x: "center", y: "middle" },
+      }),
+
+      // Starts the track over from the beginning — playMusic() alone
+      // would continue from wherever it was paused
+      Yuuna.text({
+        text: "⏮  Restart",
+        color: "white",
+        fontSize: 28,
+
+        isClickable: true,
+        id: "restart",
+
+        position: { x: CENTER.x + 90, y: CENTER.y - 40 },
         align: { x: "center", y: "middle" },
       }),
 
@@ -109,6 +123,7 @@ const nextState: NextStateFunction<GameState> = ({
   event,
   playMusic,
   pauseMusic,
+  restartMusic,
   setMusicVolume,
   setMusicPitch,
 }) => {
@@ -123,7 +138,20 @@ const nextState: NextStateFunction<GameState> = ({
       playMusic("theme");
     }
 
-    return { ...state, isPlaying: !state.isPlaying };
+    return { ...state, isPlaying: !state.isPlaying, hasStarted: true };
+  }
+
+  if (event.tag === "CLICK" && event.id === "restart") {
+    // restartMusic() only knows about a track playMusic() has already
+    // made current, so the very first click needs playMusic() instead
+    if (state.hasStarted) {
+      restartMusic();
+    } else {
+      setMusicVolume(state.volume);
+      playMusic("theme");
+    }
+
+    return { ...state, isPlaying: true, hasStarted: true };
   }
 
   if (event.tag === "CLICK" && (event.id === "volume-up" || event.id === "volume-down")) {

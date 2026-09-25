@@ -286,11 +286,18 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     audio.playbackRate = pitch;
   };
 
+  // Overall sound effect volume — applied when each sound starts rather
+  // than tracked per playing instance, since the clones below aren't
+  // kept around once playSound returns.
+  let soundVolume = 1;
+
+  const clampVolume = (volume: number) => Math.min(1, Math.max(0, volume));
+
   // Cloning the loaded element per play (instead of reusing it directly)
   // lets the same sound overlap itself — e.g. rapid clicks each get their
   // own playback instead of restarting/cutting off the previous one. It
-  // also gives each overlapping copy its own pitch.
-  const playSound = (id: string, options?: { pitch?: number }) => {
+  // also gives each overlapping copy its own pitch and volume.
+  const playSound = (id: string, options?: { pitch?: number; volume?: number }) => {
     const audio = audioById[id];
 
     if (audio === undefined) {
@@ -299,10 +306,15 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
     const instance = audio.cloneNode() as HTMLAudioElement;
     applyPitch(instance, clampPitch(options?.pitch ?? 1));
+    instance.volume = clampVolume(options?.volume ?? 1) * soundVolume;
     // A missing/failed-to-load sound (see loadAudio's onerror above)
     // rejects here instead of playing — caught and dropped rather than
     // left as an unhandled rejection, same as playMusic/resumeMusic below.
     instance.play().catch(() => {});
+  };
+
+  const setSoundVolume = (volume: number) => {
+    soundVolume = clampVolume(volume);
   };
 
   const music = props.music ?? {};
@@ -357,8 +369,17 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     currentMusic?.play().catch(() => {});
   };
 
+  const restartMusic = () => {
+    if (currentMusic === null) {
+      return;
+    }
+
+    currentMusic.currentTime = 0;
+    currentMusic.play().catch(() => {});
+  };
+
   const setMusicVolume = (volume: number) => {
-    musicVolume = Math.min(1, Math.max(0, volume));
+    musicVolume = clampVolume(volume);
 
     if (currentMusic !== null) {
       currentMusic.volume = musicVolume;
@@ -1302,9 +1323,11 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
           mouseButton,
           rightMouseButton,
           playSound,
+          setSoundVolume,
           playMusic,
           pauseMusic,
           resumeMusic,
+          restartMusic,
           setMusicVolume,
           setMusicPitch,
         });

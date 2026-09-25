@@ -298,7 +298,18 @@ export type NextStateProps<State, Custom = never> = {
   // of variety on a sound that plays often. For semitones, pass
   // `2 ** (semitones / 12)`. Clamped to 0.25-4, since browsers mute or
   // reject rates much further out than that.
-  playSound: (id: string, options?: { pitch?: number }) => void;
+  //
+  // options.volume (0 to 1, default 1) sets this one play's volume,
+  // e.g. quieter footsteps than explosions. It's multiplied by
+  // setSoundVolume's overall volume, so the two combine instead of one
+  // overriding the other. Values outside 0-1 are clamped.
+  playSound: (id: string, options?: { pitch?: number; volume?: number }) => void;
+  // Sets the overall volume (0 to 1, default 1) of every sound effect
+  // playSound starts from now on — e.g. an "SFX volume" setting, kept
+  // separate from setMusicVolume. Sounds already playing keep the volume
+  // they started with (they're usually short enough that it doesn't
+  // matter). Values outside 0-1 are clamped.
+  setSoundVolume: (volume: number) => void;
   // Starts background music (by its id in RunEngineProps.music), looping
   // it until paused. Unlike playSound, only one track plays at a time and
   // it keeps running in the background across frames/state changes
@@ -314,6 +325,11 @@ export type NextStateProps<State, Custom = never> = {
   // id again, but without needing to still have the id on hand. A no-op
   // if nothing has played yet.
   resumeMusic: () => void;
+  // Starts whichever track is current over from the beginning — playing
+  // it even if it was paused, or had reached its MusicEndEvent. Unlike
+  // playMusic/resumeMusic, which always continue from where the track
+  // left off. A no-op if nothing has played yet.
+  restartMusic: () => void;
   // Sets the volume (0 to 1) of whichever track is current, and of
   // whatever plays next — unlike pauseMusic's position, volume isn't
   // per-track, so switching tracks with playMusic keeps the same volume
