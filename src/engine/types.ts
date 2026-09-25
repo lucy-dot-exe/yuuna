@@ -290,7 +290,15 @@ export type NextStateProps<State, Custom = never> = {
   // e.g. `playSound("collect")` when a cookie is clicked. Playing the
   // same id again while it's still playing starts an overlapping copy
   // instead of cutting the first one off.
-  playSound: (id: string) => void;
+  //
+  // options.pitch is a playback-rate multiplier (default 1): 2 plays an
+  // octave higher, 0.5 an octave lower. Like speeding up/slowing down a
+  // tape, it changes the sound's length along with its pitch — e.g.
+  // `playSound("jump", { pitch: 0.9 + Math.random() * 0.2 })` for a bit
+  // of variety on a sound that plays often. For semitones, pass
+  // `2 ** (semitones / 12)`. Clamped to 0.25-4, since browsers mute or
+  // reject rates much further out than that.
+  playSound: (id: string, options?: { pitch?: number }) => void;
   // Starts background music (by its id in RunEngineProps.music), looping
   // it until paused. Unlike playSound, only one track plays at a time and
   // it keeps running in the background across frames/state changes
@@ -311,6 +319,13 @@ export type NextStateProps<State, Custom = never> = {
   // per-track, so switching tracks with playMusic keeps the same volume
   // instead of resetting to full. Values outside 0-1 are clamped.
   setMusicVolume: (volume: number) => void;
+  // Sets the pitch of whichever track is current, and of whatever plays
+  // next — the same playback-rate multiplier as playSound's
+  // options.pitch (1 is normal, clamped to 0.25-4), and, like
+  // setMusicVolume, not per-track. It speeds the track up/slows it down
+  // along with the pitch, so a track with loop: false reaches its
+  // MusicEndEvent sooner/later accordingly.
+  setMusicPitch: (pitch: number) => void;
 };
 
 // Return this from a NextStateFunction to stop the rest of a nextState

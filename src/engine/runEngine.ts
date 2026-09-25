@@ -275,10 +275,22 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   const sounds = props.sounds ?? {};
   const audioById = await iterateRecordAsync(sounds, ({ value }) => loadAudio(value.src));
 
+  // Pitch is implemented as playbackRate with preservesPitch off (which
+  // browsers default to on, stretching the sound without changing its
+  // pitch) — so pitch and speed change together, like a tape. Clamped to
+  // a range every browser actually plays instead of muting/throwing.
+  const clampPitch = (pitch: number) => Math.min(4, Math.max(0.25, pitch));
+
+  const applyPitch = (audio: HTMLAudioElement, pitch: number) => {
+    audio.preservesPitch = false;
+    audio.playbackRate = pitch;
+  };
+
   // Cloning the loaded element per play (instead of reusing it directly)
   // lets the same sound overlap itself — e.g. rapid clicks each get their
-  // own playback instead of restarting/cutting off the previous one.
-  const playSound = (id: string) => {
+  // own playback instead of restarting/cutting off the previous one. It
+  // also gives each overlapping copy its own pitch.
+  const playSound = (id: string, options?: { pitch?: number }) => {
     const audio = audioById[id];
 
     if (audio === undefined) {
@@ -286,6 +298,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     }
 
     const instance = audio.cloneNode() as HTMLAudioElement;
+    applyPitch(instance, clampPitch(options?.pitch ?? 1));
     // A missing/failed-to-load sound (see loadAudio's onerror above)
     // rejects here instead of playing — caught and dropped rather than
     // left as an unhandled rejection, same as playMusic/resumeMusic below.
@@ -315,6 +328,8 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   // tracks keeps the volume the game last set instead of resetting to
   // each element's default of 1.
   let musicVolume = 1;
+  // Same reasoning as musicVolume — playbackRate is per-element too.
+  let musicPitch = 1;
 
   const playMusic = (id: string) => {
     const audio = musicById[id];
@@ -329,6 +344,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
     audio.loop = music[id]?.loop ?? true;
     audio.volume = musicVolume;
+    applyPitch(audio, musicPitch);
     audio.play().catch(() => {});
     currentMusic = audio;
   };
@@ -346,6 +362,14 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
     if (currentMusic !== null) {
       currentMusic.volume = musicVolume;
+    }
+  };
+
+  const setMusicPitch = (pitch: number) => {
+    musicPitch = clampPitch(pitch);
+
+    if (currentMusic !== null) {
+      applyPitch(currentMusic, musicPitch);
     }
   };
 
@@ -1282,6 +1306,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
           pauseMusic,
           resumeMusic,
           setMusicVolume,
+          setMusicPitch,
         });
 
         // STOP stops the rest of the list from running for this event,
