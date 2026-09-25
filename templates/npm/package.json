@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "yuuna-engine": "^0.10.0"
+    "yuuna-engine": "^0.11.0"
   },
   "devDependencies": {
     "typescript": "^5.4.5",
