@@ -130,6 +130,8 @@ Each template's own README has more on running it once copied.
 
 - **[Yuuna's Heroes](https://lucinaexe.itch.io/yuunas-td)** — a game made
   using Yuuna.
+- **[Stackfall](https://lucinaexe.itch.io/stackfall)** — a falling-block
+  puzzle game: solo, vs AI and online.
 
 ## Development
 

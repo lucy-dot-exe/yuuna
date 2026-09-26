@@ -15,6 +15,7 @@ lib/
 dist/resources/*
 !dist/resources/yuuna.png
 !dist/resources/yuunas-heroes*.png
+!dist/resources/stackfall*.png
 !dist/resources/sunnyland/
 !dist/resources/pixel-food/
 !dist/resources/mini-pixel-pack-3/
