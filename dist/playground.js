@@ -171,6 +171,12 @@ const EXAMPLES = [
     description: "The fonts prop loads font files before the first frame, and a TEXT renderable's fontFamily picks one, a generic family, or the default Arial.",
   },
   {
+    id: "mouse-wheel",
+    label: "Mouse Wheel",
+    category: "feature",
+    description: "The WHEEL event reports mouse wheel/trackpad scrolling over the canvas — here it zooms the camera around the mouse, and Backspace resets it.",
+  },
+  {
     id: "max-fps",
     label: "Max FPS",
     category: "feature",

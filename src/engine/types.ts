@@ -201,6 +201,27 @@ export type MouseMoveEvent = {
   worldMouse: { x: number; y: number };
 };
 
+// Fires when the mouse wheel (or a trackpad's two-finger scroll) is used
+// over the canvas. deltaY is positive scrolling down/towards you and
+// negative scrolling up; deltaX is horizontal scrolling (a trackpad, or
+// Shift+wheel on most mice). Both are in pixels, whatever unit the
+// browser reported them in, but how many pixels one wheel notch is still
+// varies by browser/OS/device — so treat the sign as the reliable part,
+// e.g. `zoom * (event.deltaY < 0 ? 1.1 : 0.9)`, or scale by the size if
+// you want smooth trackpad scrolling. id is whatever renderable with an
+// id is under the mouse (if any) — no isHoverable/isClickable needed,
+// e.g. to scroll just the list the mouse is over. See
+// RunEngineProps.canvas.disableWheelScroll for the page scrolling that
+// would otherwise happen alongside it.
+export type MouseWheelEvent = {
+  tag: "WHEEL";
+  id?: string;
+  deltaX: number;
+  deltaY: number;
+  mouse: { x: number; y: number };
+  worldMouse: { x: number; y: number };
+};
+
 // Fires when the mouse leaves the canvas entirely — mouse/worldMouse are
 // the position it left from (still meaningful, even though it's now
 // outside the canvas, e.g. to tell which edge it exited through). Also
@@ -243,6 +264,7 @@ export type GameEvent =
   | HoverInEvent
   | HoverOutEvent
   | MouseMoveEvent
+  | MouseWheelEvent
   | MouseLeaveEvent
   | TabBlurEvent
   | TabFocusEvent
@@ -473,6 +495,13 @@ export type RunEngineProps<State, Custom = never> = {
     // "Save image as..."). RIGHT_CLICK and rightMouseButton work either
     // way; this only decides whether the menu opens too.
     disableContextMenu?: boolean;
+    // Keeps the mouse wheel from also scrolling (or, with Ctrl held,
+    // zooming) the page while the mouse is over the canvas. On by
+    // default, like disableContextMenu — set it to false for a game
+    // embedded in a longer page that doesn't use the wheel itself, so
+    // scrolling past the canvas isn't blocked. WHEEL events fire either
+    // way; this only decides whether the page scrolls too.
+    disableWheelScroll?: boolean;
     // Scales the canvas's backing buffer beyond width/height, without
     // changing any renderable's coordinate space — every position in
     // render() (and every mouse/touch coordinate) stays expressed in
@@ -568,6 +597,7 @@ export const keyboardKeys = [
 
   "End",
   "Delete",
+  "Backspace",
   "Tab",
   "Space",
   "Enter",

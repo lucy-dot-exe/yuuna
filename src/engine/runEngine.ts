@@ -1048,6 +1048,38 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
   canvas.addEventListener("mouseleave", handleMouseLeave);
 
+  // deltaMode says what unit the deltas are in — nearly always pixels,
+  // but Firefox reports lines for a physical mouse wheel. Converted here
+  // so WHEEL's deltas are always pixels: a line as a typical 16px line
+  // height, a page as the canvas's own logical height.
+  const WHEEL_LINE_HEIGHT = 16;
+
+  const handleWheel = (ev: WheelEvent) => {
+    if (props.canvas?.disableWheelScroll ?? true) {
+      ev.preventDefault();
+    }
+
+    const unit =
+      ev.deltaMode === ev.DOM_DELTA_LINE ? WHEEL_LINE_HEIGHT : ev.deltaMode === ev.DOM_DELTA_PAGE ? logicalHeight : 1;
+
+    const mouse = getCanvasPosition(ev);
+    const { camera } = renderState(state);
+
+    events.push({
+      tag: "WHEEL",
+      id: hoveredId ?? undefined,
+      deltaX: ev.deltaX * unit,
+      deltaY: ev.deltaY * unit,
+      mouse,
+      worldMouse: toWorldPosition(mouse, camera),
+    });
+  };
+
+  // passive: false for the same reason as the touch listeners below —
+  // browsers treat wheel listeners as passive by default, which would
+  // silently ignore disableWheelScroll's preventDefault.
+  canvas.addEventListener("wheel", handleWheel, { passive: false });
+
   // Translates touch into the same HOVER_IN/HOVER_OUT/MOUSE_MOVE/CLICK
   // events mouse input already produces (via updateHover/updateTracking/
   // fireClick/clearHover above), so existing game code written against
@@ -1614,6 +1646,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     canvas.removeEventListener("mousemove", handleMouseMoveHover);
     canvas.removeEventListener("mousemove", handleMouseMoveTracking);
     canvas.removeEventListener("mouseleave", handleMouseLeave);
+    canvas.removeEventListener("wheel", handleWheel);
     canvas.removeEventListener("touchstart", handleTouchStart);
     canvas.removeEventListener("touchmove", handleTouchMove);
     canvas.removeEventListener("touchend", handleTouchEnd);
