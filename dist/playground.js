@@ -177,6 +177,12 @@ const EXAMPLES = [
     description: "The WHEEL event reports mouse wheel/trackpad scrolling over the canvas — here it zooms the camera around the mouse, and Backspace resets it.",
   },
   {
+    id: "rotation",
+    label: "Rotation",
+    category: "feature",
+    description: "Any renderable's rotation turns it around its anchor, in radians; a GROUP's rotation carries its children around with it, and hit-testing follows the rotated shape.",
+  },
+  {
     id: "max-fps",
     label: "Max FPS",
     category: "feature",

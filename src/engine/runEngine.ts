@@ -523,11 +523,12 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     return modulateColor(parent, own);
   };
 
-  // A parent's accumulated position/scale/modulate/layer, passed down
-  // while flattening — see flattenRenderable below.
+  // A parent's accumulated position/scale/rotation/modulate/layer, passed
+  // down while flattening — see flattenRenderable below.
   type Transform = {
     anchor: Position;
     scale: { x: number; y: number };
+    rotation: number;
     modulate: string | undefined;
     layer: number;
   };
@@ -535,6 +536,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   const IDENTITY_TRANSFORM: Transform = {
     anchor: { x: 0, y: 0 },
     scale: { x: 1, y: 1 },
+    rotation: 0,
     modulate: undefined,
     layer: 0,
   };
@@ -543,10 +545,21 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   // parent's local (unscaled) units — the same way Godot composes
   // Node2D transforms — so it needs both the parent's scale and its
   // accumulated offset applied to land in absolute canvas coordinates.
-  const transformPoint = (parent: Transform, localPoint: Position): Position => ({
-    x: parent.anchor.x + localPoint.x * parent.scale.x,
-    y: parent.anchor.y + localPoint.y * parent.scale.y,
-  });
+  // A rotated parent swings the (scaled) offset around its anchor too, so
+  // children orbit it the way they would in Godot.
+  const transformPoint = (parent: Transform, localPoint: Position): Position => {
+    const x = localPoint.x * parent.scale.x;
+    const y = localPoint.y * parent.scale.y;
+
+    if (parent.rotation === 0) {
+      return { x: parent.anchor.x + x, y: parent.anchor.y + y };
+    }
+
+    const cos = Math.cos(parent.rotation);
+    const sin = Math.sin(parent.rotation);
+
+    return { x: parent.anchor.x + x * cos - y * sin, y: parent.anchor.y + x * sin + y * cos };
+  };
 
   // Each id's accumulated playback time for its current animation, plus
   // when that was last updated — keyed by id, since an ANIMATED_SPRITE
@@ -626,6 +639,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
     const localScale = resolved.scale ?? { x: 1, y: 1 };
     const scale = { x: parent.scale.x * localScale.x, y: parent.scale.y * localScale.y };
+    const rotation = parent.rotation + (resolved.rotation ?? 0);
     const modulate = composeModulate(parent.modulate, resolved.modulate);
     const layer = parent.layer + (resolved.layer ?? 0);
 
@@ -636,6 +650,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
             from: transformPoint(parent, resolved.from),
             to: transformPoint(parent, resolved.to),
             scale,
+            rotation,
             modulate,
             layer,
             children: undefined,
@@ -644,12 +659,13 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
             ...resolved,
             position: transformPoint(parent, resolved.position),
             scale,
+            rotation,
             modulate,
             layer,
             children: undefined,
           };
 
-    const childTransform: Transform = { anchor: anchorOf(effective), scale, modulate, layer };
+    const childTransform: Transform = { anchor: anchorOf(effective), scale, rotation, modulate, layer };
     const children = (resolved.children ?? []).flatMap((child) => flattenRenderable(child, childTransform));
 
     return [effective, ...children];
@@ -679,17 +695,23 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     }
 
     // Scale is applied around the renderable's anchor as a draw-time canvas
-    // transform (see applyScale below) rather than by inflating its
+    // transform (see applyTransform below) rather than by inflating its
     // size — so hit-testing does the inverse instead: bring the mouse
     // position into the renderable's own unscaled coordinate space, then
     // run the exact same math below as if scale were untouched. For
     // CIRCLE this also happens to be the standard "is this point inside
-    // this ellipse" test, for free, once it's drawing as one.
+    // this ellipse" test, for free, once it's drawing as one. Rotation is
+    // undone the same way, first: the mouse turns back around the anchor.
     const { x: scaleX, y: scaleY } = r.scale ?? { x: 1, y: 1 };
+    const rotation = r.rotation ?? 0;
     const anchor = anchorOf(r);
+    const cos = Math.cos(-rotation);
+    const sin = Math.sin(-rotation);
+    const offset = { x: position.x - anchor.x, y: position.y - anchor.y };
+    const unrotated = rotation === 0 ? offset : { x: offset.x * cos - offset.y * sin, y: offset.x * sin + offset.y * cos };
     const localPosition: Position = {
-      x: anchor.x + (position.x - anchor.x) / scaleX,
-      y: anchor.y + (position.y - anchor.y) / scaleY,
+      x: anchor.x + unrotated.x / scaleX,
+      y: anchor.y + unrotated.y / scaleY,
     };
 
     if (r.type === "CIRCLE") {
@@ -768,6 +790,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   const cameraTransformOf = (camera: { x: number; y: number; zoom: number }): Transform => ({
     anchor: { x: -camera.x * camera.zoom, y: -camera.y * camera.zoom },
     scale: { x: camera.zoom, y: camera.zoom },
+    rotation: 0,
     modulate: undefined,
     layer: 0,
   });
@@ -1183,20 +1206,23 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
   context.imageSmoothingEnabled = false;
 
-  // Scale is a canvas transform around the renderable's anchor, applied
-  // before its type-specific drawing runs below — everything drawn under
-  // it (fills, strokes, images, even font size) comes out scaled without
-  // each renderable type needing its own size math, and a CIRCLE drawn
-  // under a non-uniform scale comes out an ellipse for free.
-  const applyScale = (renderable: Renderable) => {
+  // Scale and rotation are a canvas transform around the renderable's
+  // anchor, applied before its type-specific drawing runs below —
+  // everything drawn under it (fills, strokes, images, even font size)
+  // comes out scaled and turned without each renderable type needing its
+  // own size math, and a CIRCLE drawn under a non-uniform scale comes out
+  // an ellipse for free. Scale applies first, then rotation.
+  const applyTransform = (renderable: Renderable) => {
     const { x: scaleX, y: scaleY } = renderable.scale ?? { x: 1, y: 1 };
+    const rotation = renderable.rotation ?? 0;
 
-    if (scaleX === 1 && scaleY === 1) {
+    if (scaleX === 1 && scaleY === 1 && rotation === 0) {
       return;
     }
 
     const anchor = anchorOf(renderable);
     context.translate(anchor.x, anchor.y);
+    context.rotate(rotation);
     context.scale(scaleX, scaleY);
     context.translate(-anchor.x, -anchor.y);
   };
@@ -1447,7 +1473,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
     for (const renderable of renderables) {
       context.save();
-      applyScale(renderable);
+      applyTransform(renderable);
 
       if (renderable.type === "RECTANGLE") {
         context.fillStyle =

@@ -8,15 +8,22 @@ type BaseRenderable = {
   // position (or LINE's `from`). Defaults to { x: 1, y: 1 }. A CIRCLE
   // scaled unevenly draws as an ellipse.
   scale?: { x: number; y: number };
+  // Turns this renderable around the same anchor as scale (its position,
+  // or LINE's `from`), in radians; positive is clockwise on screen.
+  // Defaults to 0. Scale applies before rotation. To spin a SPRITE around
+  // its center, put it in a GROUP positioned at that center, with the
+  // sprite offset by minus half its size, and rotate the GROUP.
+  rotation?: number;
   // Multiplies this renderable's color channel-by-channel, the same way
   // Godot's `modulate` works — e.g. "#808080" halves brightness, "#ff0000"
   // keeps only the red channel. Accepts any valid CSS color string.
   modulate?: string;
   // Nested renderables, positioned relative to this one — like Godot's
   // parent/child nodes. A child's position is added to its parent's
-  // (scaled by the parent's own scale), and scale/modulate/layer all
-  // compose down the tree: a child's effective scale is the parent's
-  // times its own, modulate multiplies the same way, and layer adds (so
+  // (scaled by the parent's own scale, then turned by its rotation), and
+  // scale/rotation/modulate/layer all compose down the tree: a child's
+  // effective scale is the parent's times its own, rotations add, modulate
+  // multiplies the same way, and layer adds (so
   // it's relative to the parent's, matching Godot's default behavior —
   // a deeply-nested child can still end up drawn in front of an
   // unrelated top-level renderable if its accumulated layer says so).
