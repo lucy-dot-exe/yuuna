@@ -603,7 +603,8 @@ export type RunEngineProps<State, Custom = never> = {
   // and letting go of it fires a CLICK on whatever it's over. Read from
   // state every tick, at { x, y } in canvas pixels; only a change (it
   // moved, was pressed or let go) fires anything, so a real mouse or
-  // finger used in between isn't fought over. Return null while there's
+  // finger used in between isn't fought over. Pressing it hovers again
+  // first, in case the screen changed under it since it last moved. Return null while there's
   // no such pointer — it lets go (without a click) and stops hovering
   // when it goes. The engine doesn't draw it; render your own cursor.
   virtualPointer?: (state: State) => { x: number; y: number; isPressed: boolean } | null;

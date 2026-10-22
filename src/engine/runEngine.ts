@@ -1274,7 +1274,12 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
     const position = { x: pointer.x, y: pointer.y };
 
-    if (last === null || last.x !== pointer.x || last.y !== pointer.y) {
+    // Pressing counts as arriving too: the screen may have changed under
+    // a pointer that hasn't moved since, and the press is meant for
+    // whatever's there now.
+    const pressing = pointer.isPressed && !(last?.isPressed ?? false);
+
+    if (last === null || last.x !== pointer.x || last.y !== pointer.y || pressing) {
       updateHover(position);
       updateTracking(position);
     }
