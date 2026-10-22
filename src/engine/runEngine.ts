@@ -1239,6 +1239,42 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
   canvas.addEventListener("touchcancel", handleTouchCancel, { passive: false });
 
+  // RunEngineProps.virtualPointer, as it was last tick — only what
+  // changed since then turns into events, the same ones a mouse makes
+  // (see updateHover/updateTracking/fireClick/clearHover above). Its
+  // press is kept apart from the real mouse button's, and the two are
+  // combined into mouseButton each tick, so neither lets go of the other.
+  let lastVirtualPointer: { x: number; y: number; isPressed: boolean } | null = null;
+  let virtualPointerPressed = false;
+
+  const updateVirtualPointer = () => {
+    const pointer = props.virtualPointer?.(state) ?? null;
+    const last = lastVirtualPointer;
+    lastVirtualPointer = pointer;
+
+    if (pointer === null) {
+      if (last !== null) {
+        virtualPointerPressed = false;
+        clearHover(last);
+      }
+
+      return;
+    }
+
+    const position = { x: pointer.x, y: pointer.y };
+
+    if (last === null || last.x !== pointer.x || last.y !== pointer.y) {
+      updateHover(position);
+      updateTracking(position);
+    }
+
+    virtualPointerPressed = pointer.isPressed;
+
+    if (last !== null && last.isPressed && !pointer.isPressed) {
+      fireClick(position);
+    }
+  };
+
   // Tab switches are a document-level concern (visibilitychange), not
   // something that ever reaches the canvas itself the way mouse/keyboard
   // events do.
@@ -1463,7 +1499,11 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
     events.push({ tag: "TIME", delta: delta });
 
-    const mouseButtonPressed = currentMouseButtonState.isPressed;
+    updateVirtualPointer();
+
+    // The real mouse button (or mouse finger) and the virtual pointer's
+    // press are one button as far as nextState is concerned.
+    const mouseButtonPressed = currentMouseButtonState.isPressed || virtualPointerPressed;
 
     // Built once per tick, like the keyboard/mouse snapshots below are
     // the same for every event in it. worldMouse uses the camera as this

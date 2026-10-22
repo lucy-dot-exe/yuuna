@@ -189,6 +189,12 @@ const EXAMPLES = [
     description: "touches lists every finger on a touchscreen — here one thumb drags a joystick while the other taps a button, and touchAsMouse keeps the joystick thumb out of mouse input.",
   },
   {
+    id: "virtual-pointer",
+    label: "Virtual Pointer",
+    category: "feature",
+    description: "virtualPointer is a cursor the game moves itself that works exactly like the mouse — here the arrow keys steer it and Space presses it, painting and clicking with plain mouse code.",
+  },
+  {
     id: "max-fps",
     label: "Max FPS",
     category: "feature",
