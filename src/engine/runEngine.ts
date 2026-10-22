@@ -1523,9 +1523,11 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     currentTimeScale = props.timeScale?.(state) ?? 1;
     const delta = rawDelta * currentTimeScale;
 
-    events.push({ tag: "TIME", delta: delta });
-
+    // Before TIME, the same as real mouse/touch input queued since the
+    // last tick — so, say, its CLICK lands before TIME sees the button up.
     updateVirtualPointer();
+
+    events.push({ tag: "TIME", delta: delta });
 
     // The real mouse button (or mouse finger) and the virtual pointer's
     // press are one button as far as nextState is concerned.
