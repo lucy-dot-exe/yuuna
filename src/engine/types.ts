@@ -287,6 +287,37 @@ export type GameEvent =
 // happened outside the normal render-loop-driven flow of TIME/CLICK/etc.
 export type CustomGameEvent<Custom> = { tag: "CUSTOM"; event: Custom };
 
+// One finger on the canvas, as NextStateProps.touches reports it. id stays
+// the same for as long as that finger stays down (the browser's own
+// Touch.identifier), so a game can follow one finger across ticks — e.g.
+// keep the joystick under whichever finger started it.
+//
+// isPressed/isJustPressed/isJustReleased mirror `keyboard`: a finger
+// that touched down since the last tick is isJustPressed, and one that
+// lifted is still listed for that one tick with isPressed false and
+// isJustReleased true, then gone. A tap quick enough to start and end
+// between two ticks is listed once with both isJustPressed and
+// isJustReleased, so it's never missed.
+//
+// mouse/worldMouse are where the finger is now, startMouse/
+// startWorldMouse where it touched down — the two together are a drag
+// (a joystick's direction is mouse minus startMouse). A finger that
+// slides off the canvas keeps being tracked, with positions outside it.
+//
+// isMouse is true for the one finger also driving mouse input (HOVER_IN,
+// MOUSE_MOVE, CLICK, mouseButton) — see RunEngineProps.touchAsMouse.
+export type TouchState = {
+  id: number;
+  isPressed: boolean;
+  isJustPressed: boolean;
+  isJustReleased: boolean;
+  mouse: { x: number; y: number };
+  worldMouse: { x: number; y: number };
+  startMouse: { x: number; y: number };
+  startWorldMouse: { x: number; y: number };
+  isMouse: boolean;
+};
+
 export type NextStateProps<State, Custom = never> = {
   state: State;
   event: GameEvent | CustomGameEvent<Custom>;
@@ -320,6 +351,11 @@ export type NextStateProps<State, Custom = never> = {
     isJustPressed: boolean;
     isJustReleased: boolean;
   };
+  // Every finger on the canvas right now, in the order they touched down
+  // — for anything that needs more than the one pointer mouse input
+  // models, like a virtual joystick under one thumb and a jump button
+  // under the other. Empty without a touchscreen. See TouchState.
+  touches: TouchState[];
   // Plays a sound effect (by its id in RunEngineProps.sounds) as a
   // side effect of this call — call it from within a NextStateFunction,
   // e.g. `playSound("collect")` when a cookie is clicked. Playing the
@@ -532,6 +568,16 @@ export type RunEngineProps<State, Custom = never> = {
   // you're tracking yourself. Affects rendering and hit-testing, but not
   // the raw `mouse` on click/hover events — see worldMouse for that.
   camera?: (state: State) => { x: number; y: number; zoom: number };
+  // Decides whether a finger touching down also acts as the mouse — one
+  // finger at a time does (the first to land while none is), turning
+  // into the same HOVER_IN/MOUSE_MOVE/CLICK events and mouseButton state
+  // a mouse produces, so mouse-driven code works on a touchscreen as is.
+  // Called once per finger as it lands, with where it landed in canvas
+  // pixels; return false to keep that finger out of mouse input
+  // entirely, so it only shows up in NextStateProps.touches — e.g. the
+  // thumb on a virtual joystick, which shouldn't also press whatever
+  // button happens to be under it. Missing means every finger may.
+  touchAsMouse?: (state: State, mouse: { x: number; y: number }) => boolean;
   // Globally scales the passage of simulated time — every TIME event's
   // own `delta`, and every ANIMATED_SPRITE's own playback speed (on top
   // of whatever that renderable's own `timeScale` already multiplies it

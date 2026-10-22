@@ -13,6 +13,7 @@ import {
   RunEngineFunction,
   RunEngineProps,
   STOP,
+  TouchState,
   keyboardKeys,
 } from "./types";
 
@@ -1103,13 +1104,31 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   // silently ignore disableWheelScroll's preventDefault.
   canvas.addEventListener("wheel", handleWheel, { passive: false });
 
-  // Translates touch into the same HOVER_IN/HOVER_OUT/MOUSE_MOVE/CLICK
-  // events mouse input already produces (via updateHover/updateTracking/
-  // fireClick/clearHover above), so existing game code written against
-  // those events works on a touchscreen with no changes of its own.
-  // Single-touch only — touches[0]/changedTouches[0] — the same "one
-  // active pointer" model mouse input already assumes; a second finger is
-  // ignored rather than tracked as its own pointer.
+  // Every finger currently down (plus any lifted since the last tick),
+  // keyed by Touch.identifier — what NextStateProps.touches is built
+  // from once per tick (see touchStates below). isNew/isReleased are
+  // "since the last tick", cleared (or the entry dropped) after each one.
+  type TrackedTouch = {
+    id: number;
+    mouse: Position;
+    startMouse: Position;
+    isNew: boolean;
+    isReleased: boolean;
+  };
+
+  const trackedTouches = new Map<number, TrackedTouch>();
+
+  // The one finger also acting as the mouse (see RunEngineProps.
+  // touchAsMouse), or null while none is — the same "one active pointer"
+  // model mouse input already assumes. Every other finger only shows up
+  // in NextStateProps.touches.
+  let mouseTouchId: number | null = null;
+
+  // Translates the mouse finger into the same HOVER_IN/HOVER_OUT/
+  // MOUSE_MOVE/CLICK events mouse input already produces (via
+  // updateHover/updateTracking/fireClick/clearHover above), so existing
+  // game code written against those events works on a touchscreen with
+  // no changes of its own.
   //
   // preventDefault on start/move keeps a drag/tap on the canvas from also
   // scrolling, pinch-zooming, or triggering pull-to-refresh — the browser
@@ -1118,14 +1137,26 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   const handleTouchStart = (ev: TouchEvent) => {
     ev.preventDefault();
 
-    const touch = ev.touches[0];
-    if (touch === undefined) return;
+    for (const touch of Array.from(ev.changedTouches)) {
+      const mouse = getTouchPosition(touch);
 
-    currentMouseButtonState.isPressed = true;
+      trackedTouches.set(touch.identifier, {
+        id: touch.identifier,
+        mouse,
+        startMouse: mouse,
+        isNew: true,
+        isReleased: false,
+      });
 
-    const mouse = getTouchPosition(touch);
-    updateHover(mouse);
-    updateTracking(mouse);
+      if (mouseTouchId !== null || !(props.touchAsMouse?.(state, mouse) ?? true)) {
+        continue;
+      }
+
+      mouseTouchId = touch.identifier;
+      currentMouseButtonState.isPressed = true;
+      updateHover(mouse);
+      updateTracking(mouse);
+    }
   };
 
   canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
@@ -1133,17 +1164,44 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   const handleTouchMove = (ev: TouchEvent) => {
     ev.preventDefault();
 
-    const touch = ev.touches[0];
-    if (touch === undefined) return;
+    for (const touch of Array.from(ev.changedTouches)) {
+      const tracked = trackedTouches.get(touch.identifier);
+      if (tracked === undefined) continue;
 
-    const mouse = getTouchPosition(touch);
-    updateHover(mouse);
-    updateTracking(mouse);
+      const mouse = getTouchPosition(touch);
+      tracked.mouse = mouse;
+
+      if (touch.identifier === mouseTouchId) {
+        updateHover(mouse);
+        updateTracking(mouse);
+      }
+    }
   };
 
   canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
 
-  // A lifted finger both releases (mirroring mouseup) and clicks
+  // Marks a lifted (or cancelled) finger released, and lets the mouse
+  // go if it was the mouse finger. Returns where it lifted, for the
+  // click below, or null if it wasn't the mouse finger.
+  const releaseTouch = (touch: Touch): Position | null => {
+    const mouse = getTouchPosition(touch);
+    const tracked = trackedTouches.get(touch.identifier);
+
+    if (tracked !== undefined) {
+      tracked.mouse = mouse;
+      tracked.isReleased = true;
+    }
+
+    if (touch.identifier !== mouseTouchId) {
+      return null;
+    }
+
+    mouseTouchId = null;
+    currentMouseButtonState.isPressed = false;
+    return mouse;
+  };
+
+  // The mouse finger lifting both releases (mirroring mouseup) and clicks
   // (mirroring the browser's own click-after-mouseup) — touch has no
   // separate "up" and "click" events of its own the way mouse does, so
   // both happen here together, in that order. hover is updated once more
@@ -1154,15 +1212,14 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   const handleTouchEnd = (ev: TouchEvent) => {
     ev.preventDefault();
 
-    currentMouseButtonState.isPressed = false;
+    for (const touch of Array.from(ev.changedTouches)) {
+      const mouse = releaseTouch(touch);
+      if (mouse === null) continue;
 
-    const touch = ev.changedTouches[0];
-    if (touch === undefined) return;
-
-    const mouse = getTouchPosition(touch);
-    updateHover(mouse);
-    fireClick(mouse);
-    clearHover(mouse);
+      updateHover(mouse);
+      fireClick(mouse);
+      clearHover(mouse);
+    }
   };
 
   canvas.addEventListener("touchend", handleTouchEnd, { passive: false });
@@ -1172,12 +1229,12 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   // handled the same as lifting the finger, minus the click, since
   // there's no tap to speak of once the touch itself has been cancelled.
   const handleTouchCancel = (ev: TouchEvent) => {
-    currentMouseButtonState.isPressed = false;
+    for (const touch of Array.from(ev.changedTouches)) {
+      const mouse = releaseTouch(touch);
+      if (mouse === null) continue;
 
-    const touch = ev.changedTouches[0];
-    if (touch === undefined) return;
-
-    clearHover(getTouchPosition(touch));
+      clearHover(mouse);
+    }
   };
 
   canvas.addEventListener("touchcancel", handleTouchCancel, { passive: false });
@@ -1406,6 +1463,24 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
     events.push({ tag: "TIME", delta: delta });
 
+    const mouseButtonPressed = currentMouseButtonState.isPressed;
+
+    // Built once per tick, like the keyboard/mouse snapshots below are
+    // the same for every event in it. worldMouse uses the camera as this
+    // tick starts.
+    const touchCamera = props.camera?.(state) ?? DEFAULT_CAMERA;
+    const touches: TouchState[] = Array.from(trackedTouches.values(), (tracked) => ({
+      id: tracked.id,
+      isPressed: !tracked.isReleased,
+      isJustPressed: tracked.isNew,
+      isJustReleased: tracked.isReleased,
+      mouse: tracked.mouse,
+      worldMouse: toWorldPosition(tracked.mouse, touchCamera),
+      startMouse: tracked.startMouse,
+      startWorldMouse: toWorldPosition(tracked.startMouse, touchCamera),
+      isMouse: tracked.id === mouseTouchId,
+    }));
+
     for (const event of events) {
       const keyboard = iterateRecord(
         previousState.keyboardState,
@@ -1421,9 +1496,9 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
       );
 
       const mouseButton = {
-        isPressed: currentMouseButtonState.isPressed,
-        isJustPressed: currentMouseButtonState.isPressed && !previousMouseButtonState.isPressed,
-        isJustReleased: !currentMouseButtonState.isPressed && previousMouseButtonState.isPressed,
+        isPressed: mouseButtonPressed,
+        isJustPressed: mouseButtonPressed && !previousMouseButtonState.isPressed,
+        isJustReleased: !mouseButtonPressed && previousMouseButtonState.isPressed,
       };
 
       const rightMouseButton = {
@@ -1439,6 +1514,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
           keyboard,
           mouseButton,
           rightMouseButton,
+          touches,
           playSound,
           setSoundVolume,
           playMusic,
@@ -1637,8 +1713,21 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
     lastFrame = now;
     previousState.keyboardState = { ...currentState.keyboardState };
-    previousMouseButtonState = { ...currentMouseButtonState };
+    previousMouseButtonState = { isPressed: mouseButtonPressed };
     previousRightMouseButtonState = { ...currentRightMouseButtonState };
+
+    // Only the touches in this tick's snapshot — one that landed while
+    // this tick ran is still new for the next one.
+    for (const { id } of touches) {
+      const tracked = trackedTouches.get(id);
+      if (tracked === undefined) continue;
+
+      if (tracked.isReleased) {
+        trackedTouches.delete(id);
+      } else {
+        tracked.isNew = false;
+      }
+    }
   }, 0);
 
   resetCanvas = () => {

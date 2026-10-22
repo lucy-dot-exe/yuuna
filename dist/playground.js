@@ -183,6 +183,12 @@ const EXAMPLES = [
     description: "Any renderable's rotation turns it around its anchor, in radians; a GROUP's rotation carries its children around with it, and hit-testing follows the rotated shape.",
   },
   {
+    id: "multi-touch",
+    label: "Multi Touch",
+    category: "feature",
+    description: "touches lists every finger on a touchscreen — here one thumb drags a joystick while the other taps a button, and touchAsMouse keeps the joystick thumb out of mouse input.",
+  },
+  {
     id: "max-fps",
     label: "Max FPS",
     category: "feature",

@@ -10,4 +10,5 @@ export type {
   ResourceConfig,
   GameEvent,
   CustomGameEvent,
+  TouchState,
 } from "./engine/types";
