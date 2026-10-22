@@ -264,6 +264,14 @@ export type MusicEndEvent = { tag: "MUSIC_END"; id: string };
 // state rather than assuming a requestFullscreen() call succeeded.
 export type FullscreenChangeEvent = { tag: "FULLSCREEN_CHANGE"; isFullscreen: boolean };
 
+// Fires whenever the browser window changes size — dragged, maximized, a
+// phone turned on its side — and once as the game starts, so state can
+// begin from the real size. width/height are the window's, in CSS pixels
+// (innerWidth/innerHeight), not the canvas's: for choosing a layout by
+// the window's shape, e.g. a tall one when a phone is held upright (see
+// RunEngineProps.canvasSize).
+export type WindowResizeEvent = { tag: "WINDOW_RESIZE"; width: number; height: number };
+
 export type GameEvent =
   | TimeEvent
   | ClickEvent
@@ -276,7 +284,8 @@ export type GameEvent =
   | TabBlurEvent
   | TabFocusEvent
   | MusicEndEvent
-  | FullscreenChangeEvent;
+  | FullscreenChangeEvent
+  | WindowResizeEvent;
 
 // Wraps whatever type you pass as RunEngineProps's Custom type parameter
 // — its shape is entirely up to you, unlike the built-in GameEvent
@@ -568,6 +577,15 @@ export type RunEngineProps<State, Custom = never> = {
   // you're tracking yourself. Affects rendering and hit-testing, but not
   // the raw `mouse` on click/hover events — see worldMouse for that.
   camera?: (state: State) => { x: number; y: number; zoom: number };
+  // The canvas's logical resolution (what canvas.width/height set once)
+  // as a function of state, read every tick — for a game whose screen
+  // changes shape as it runs, like a tall layout while a phone is held
+  // upright (see WindowResizeEvent) or a wider one with room for thumbs.
+  // Takes the place of canvas.width/height when set. A new size applies
+  // before that tick draws; canvas.resize and pixelRatio keep working,
+  // refitting to the new shape at once, and mouse/touch positions are
+  // in the new size from then on.
+  canvasSize?: (state: State) => { width: number; height: number };
   // Decides whether a finger touching down also acts as the mouse — one
   // finger at a time does (the first to land while none is), turning
   // into the same HOVER_IN/MOUSE_MOVE/CLICK events and mouseButton state

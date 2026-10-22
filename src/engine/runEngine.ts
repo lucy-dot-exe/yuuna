@@ -179,24 +179,9 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
     throw new Error("Failed to get context from canvas");
   }
 
-  if (props.canvas?.width !== undefined) {
-    canvas.width = props.canvas.width;
-  }
-
-  if (props.canvas?.height !== undefined) {
-    canvas.height = props.canvas.height;
-  }
-
   if (props.canvas?.backgroundColor !== undefined) {
     canvas.style.backgroundColor = props.canvas.backgroundColor;
   }
-
-  // The canvas's *logical* resolution — the fixed space every renderable
-  // position, and every mouse/touch coordinate, is expressed in. Captured
-  // here, before pixelRatio (below) scales the actual backing buffer past
-  // it, so both stay anchored to this regardless of what pixelRatio does.
-  const logicalWidth = canvas.width;
-  const logicalHeight = canvas.height;
 
   // Scales the backing buffer beyond logicalWidth/logicalHeight so text
   // and vector shapes (fillText, arc, ...) render crisply on a HiDPI
@@ -208,16 +193,42 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
   // art has no reason to turn this on.
   const pixelRatio = props.canvas?.pixelRatio === true ? window.devicePixelRatio || 1 : props.canvas?.pixelRatio ?? 1;
 
-  if (pixelRatio !== 1) {
+  // The canvas's *logical* resolution — the space every renderable
+  // position, and every mouse/touch coordinate, is expressed in. Kept
+  // apart from canvas.width/height, which pixelRatio scales the actual
+  // backing buffer past, so both stay anchored to this regardless of
+  // what pixelRatio does. Only setLogicalSize changes it: once below,
+  // and again whenever RunEngineProps.canvasSize asks for a new size.
+  let logicalWidth = 0;
+  let logicalHeight = 0;
+
+  const setLogicalSize = (width: number, height: number) => {
+    logicalWidth = width;
+    logicalHeight = height;
+
     // Resizing the backing buffer resets the 2D context's transform (and
     // everything else about its state), so context.scale below has to
     // come after this, not before.
-    canvas.width = logicalWidth * pixelRatio;
-    canvas.height = logicalHeight * pixelRatio;
-    canvas.style.width = `${logicalWidth}px`;
-    canvas.style.height = `${logicalHeight}px`;
-    context.scale(pixelRatio, pixelRatio);
-  }
+    canvas.width = width * pixelRatio;
+    canvas.height = height * pixelRatio;
+
+    if (pixelRatio !== 1) {
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      context.scale(pixelRatio, pixelRatio);
+    }
+
+    context.imageSmoothingEnabled = false;
+  };
+
+  // canvasSize wins over canvas.width/height; with neither, the canvas
+  // keeps whatever size its element already has.
+  const initialSize = props.canvasSize?.(props.initialState) ?? {
+    width: props.canvas?.width ?? canvas.width,
+    height: props.canvas?.height ?? canvas.height,
+  };
+
+  setLogicalSize(initialSize.width, initialSize.height);
 
   // Make the canvas focusable so keyboard input is scoped to it instead of
   // leaking to the rest of the page (e.g. arrow keys scrolling the window).
@@ -1297,6 +1308,16 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
   window.document.addEventListener("fullscreenchange", handleFullscreenChange);
 
+  // See WindowResizeEvent — the window's own size, for the game to pick
+  // a layout (and maybe a canvasSize) from. Queued once now too, so the
+  // first tick already knows it.
+  const handleWindowResize = () => {
+    events.push({ tag: "WINDOW_RESIZE", width: window.innerWidth, height: window.innerHeight });
+  };
+
+  handleWindowResize();
+  window.addEventListener("resize", handleWindowResize);
+
   context.imageSmoothingEnabled = false;
 
   // Scale and rotation are a canvas transform around the renderable's
@@ -1581,6 +1602,16 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
     events.splice(0, events.length);
 
+    // A canvasSize change applies here, after this tick's nextState and
+    // before it draws, so the frame drawn for a new layout is already
+    // the new shape.
+    const size = props.canvasSize?.(state);
+
+    if (size !== undefined && (size.width !== logicalWidth || size.height !== logicalHeight)) {
+      setLogicalSize(size.width, size.height);
+      applyResize();
+    }
+
     context.clearRect(0, 0, logicalWidth, logicalHeight);
 
     const { cursor, renderables } = renderState(state);
@@ -1816,6 +1847,7 @@ export const runEngine: RunEngineFunction = async <State, Custom = never>(
 
     // Same pile-up risk as the canvas listeners above, but on `window`.
     window.removeEventListener("resize", applyResize);
+    window.removeEventListener("resize", handleWindowResize);
   };
 
   return { sendEvent, requestFullscreen, exitFullscreen, addResource };

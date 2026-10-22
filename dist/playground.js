@@ -195,6 +195,12 @@ const EXAMPLES = [
     description: "virtualPointer is a cursor the game moves itself that works exactly like the mouse — here the arrow keys steer it and Space presses it, painting and clicking with plain mouse code.",
   },
   {
+    id: "canvas-size",
+    label: "Canvas Size",
+    category: "feature",
+    description: "canvasSize sets the canvas's resolution from state every tick, and WINDOW_RESIZE reports the window's shape — here the canvas turns tall when the window does.",
+  },
+  {
     id: "max-fps",
     label: "Max FPS",
     category: "feature",
